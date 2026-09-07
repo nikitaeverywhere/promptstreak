@@ -1,0 +1,53 @@
+{
+  "name": "promptstreak",
+  "version": "0.1.0",
+  "description": "Your Claude Code prompting habits as a GitHub-style contribution graph. Runs locally, uploads nothing.",
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "bin": {
+    "promptstreak": "lib/cli.js"
+  },
+  "files": [
+    "lib/**/*"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc && npm run build:web",
+    "dev": "tsx src/cli.ts",
+    "test": "TZ=UTC tsx --test tests/*.test.ts",
+    "web:dev": "npx --yes serve web",
+    "web:deploy": "npx --yes wrangler deploy",
+    "build:web": "esbuild src/web.ts --bundle --format=esm --minify --target=es2022 --external:node:zlib --outfile=web/app.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nikitaeverywhere/promptstreak.git"
+  },
+  "keywords": [
+    "claude-code",
+    "contribution-graph",
+    "prompts",
+    "developer-tools",
+    "cli",
+    "ai-coding",
+    "statistics"
+  ],
+  "author": {
+    "name": "Nikita Savchenko",
+    "url": "https://nikitaeverywhere.com"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/nikitaeverywhere/promptstreak/issues"
+  },
+  "homepage": "https://github.com/nikitaeverywhere/promptstreak#readme",
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "esbuild": "^0.28.2",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}

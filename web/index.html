@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>promptstreak — your Claude Code prompting habits as a contribution graph</title>
+<meta name="description" content="A year of your Claude Code prompts as a GitHub-style contribution graph. God prompts, leash length, autonomy hours. Runs entirely in your browser — nothing is uploaded.">
+<meta property="og:title" content="promptstreak">
+<meta property="og:description" content="Your Claude Code prompting habits as a contribution graph.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='3' fill='%230b0d10'/><rect x='3' y='6' width='3' height='3' rx='1' fill='%2340c463'/><rect x='7' y='3' width='3' height='3' rx='1' fill='%23ffd34d'/><rect x='7' y='10' width='3' height='3' rx='1' fill='%2330a14e'/><rect x='11' y='6' width='3' height='3' rx='1' fill='%23216e39'/></svg>">
+<style>
+  :root {
+    --bg: #0b0d10;
+    --panel: #12161b;
+    --line: #1e242c;
+    --ink: #e8edf3;
+    --mute: #8a97a6;
+    --faint: #5a6673;
+    --empty: #1a2029;
+    --g1: #0e4429; --g2: #216e39; --g3: #30a14e; --g4: #40c463;
+    --gold: #ffd34d; --gold-dim: #c99a20;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 400 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 40px 20px 80px; }
+  header { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 28px; }
+  h1 { font-size: 20px; margin: 0; letter-spacing: -0.01em; }
+  h1 b { color: var(--g4); font-weight: 700; }
+  .tag { font-size: 13px; color: var(--faint); }
+
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 24px; }
+  .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; flex-wrap: wrap; margin-bottom: 22px; }
+  .arch { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; }
+  .arch small { display: block; font-size: 13px; font-weight: 400; color: var(--mute); letter-spacing: 0; margin-top: 3px; }
+  .total { text-align: right; }
+  .total b { font-family: var(--mono); font-size: 26px; font-weight: 700; }
+  .total small { display: block; font-size: 13px; color: var(--mute); margin-top: 3px; }
+
+  .gridscroll { overflow-x: auto; padding-bottom: 6px; }
+  .grid { display: grid; grid-auto-flow: column; grid-template-rows: repeat(7, 11px); gap: 3px; width: max-content; }
+  .cell { width: 11px; height: 11px; border-radius: 2px; background: var(--empty); }
+  .cell[data-l="1"] { background: var(--g1); } .cell[data-l="2"] { background: var(--g2); }
+  .cell[data-l="3"] { background: var(--g3); } .cell[data-l="4"] { background: var(--g4); }
+  .cell[data-gold="1"] { background: var(--gold-dim); }
+  .cell[data-gold="2"] { background: var(--gold); box-shadow: 0 0 6px rgba(255,211,77,.55); }
+  .cell[data-none] { background: transparent; }
+  .months { display: grid; grid-auto-flow: column; gap: 3px; width: max-content; font-size: 10px; color: var(--faint); margin-bottom: 4px; height: 13px; }
+  .months span { width: 11px; white-space: nowrap; }
+
+  .facts { display: flex; gap: 22px; flex-wrap: wrap; margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--line); }
+  .fact b { font-family: var(--mono); font-size: 17px; display: block; }
+  .fact span { font-size: 12px; color: var(--mute); }
+  .fact.g b { color: var(--gold); }
+
+  .toggles { display: flex; flex-wrap: wrap; gap: 7px; margin: 22px 0 10px; }
+  .toggles button {
+    font: inherit; font-size: 13px; padding: 5px 11px; border-radius: 999px; cursor: pointer;
+    background: transparent; color: var(--mute); border: 1px solid var(--line);
+  }
+  .toggles button:hover { color: var(--ink); border-color: var(--faint); }
+  .toggles button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); font-weight: 600; }
+  .explain { font-size: 13px; color: var(--mute); min-height: 20px; margin-bottom: 22px; }
+
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin: 22px 0; }
+  .btn {
+    font: inherit; font-size: 14px; font-weight: 600; padding: 9px 16px; border-radius: 9px; cursor: pointer;
+    background: var(--g3); color: #04140a; border: 0;
+  }
+  .btn:hover { background: var(--g4); }
+  .btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); font-weight: 400; }
+  .btn.ghost:hover { border-color: var(--faint); }
+
+  h2 { font-size: 15px; margin: 40px 0 6px; }
+  .sub { font-size: 13px; color: var(--mute); margin: 0 0 14px; }
+  .drop {
+    border: 1px dashed var(--line); border-radius: 12px; padding: 26px; text-align: center;
+    color: var(--mute); font-size: 14px; cursor: pointer; transition: .12s;
+  }
+  .drop:hover, .drop.over { border-color: var(--g3); color: var(--ink); background: #0f1519; }
+  .drop code { font-family: var(--mono); font-size: 13px; color: var(--faint); }
+  .files { margin: 14px 0 0; padding: 0; list-style: none; }
+  .files li { display: flex; align-items: center; gap: 12px; padding: 7px 0; font-size: 13px; }
+  .files .name { font-family: var(--mono); color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .files .n { color: var(--mute); margin-left: auto; white-space: nowrap; }
+  .files button { background: none; border: 0; color: var(--faint); cursor: pointer; font-size: 16px; padding: 0 4px; }
+  .files button:hover { color: var(--ink); }
+
+  .cmd { display: flex; align-items: center; gap: 10px; background: #080a0d; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; font-family: var(--mono); font-size: 14px; }
+  .cmd span { color: var(--faint); }
+  .cmd code { flex: 1; color: var(--ink); }
+  .trend { display: flex; gap: 2px; align-items: flex-end; height: 34px; margin-top: 8px; }
+  .trend i { flex: 1; background: var(--g2); border-radius: 2px 2px 0 0; min-height: 2px; }
+  .trend i.last { background: var(--g4); }
+  footer { margin-top: 56px; font-size: 12px; color: var(--faint); line-height: 1.7; }
+  footer a { color: var(--mute); }
+  .hidden { display: none !important; }
+  canvas { display: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>prompt<b>streak</b></h1>
+    <span class="tag">a year of how you actually work with Claude Code</span>
+  </header>
+
+  <div id="empty">
+    <div class="card">
+      <p style="margin:0 0 16px;font-size:16px">Your commit graph says an agent was busy. This one says what <em>you</em> did.</p>
+      <div class="cmd"><span>$</span><code id="cmd">npx promptstreak</code><button class="btn ghost" id="copy">Copy</button></div>
+      <p class="sub" style="margin:14px 0 0">Runs on your machine, reads <code style="font-family:var(--mono)">~/.claude/history.jsonl</code>, and opens this page with your graph in the URL. Nothing is uploaded — not even by this page.</p>
+    </div>
+  </div>
+
+  <div id="app" class="hidden">
+    <div class="card" id="shot">
+      <div class="top">
+        <div><div class="arch" id="arch">—<small id="archSub"></small></div></div>
+        <div class="total"><b id="total">0</b><small id="totalSub"></small></div>
+      </div>
+      <div class="gridscroll">
+        <div class="months" id="months"></div>
+        <div class="grid" id="grid"></div>
+      </div>
+      <div class="facts" id="facts"></div>
+    </div>
+
+    <div class="toggles" id="toggles"></div>
+    <div class="explain" id="explain"></div>
+
+    <div class="row">
+      <button class="btn" id="png">Download PNG</button>
+      <button class="btn ghost" id="link">Copy share link</button>
+    </div>
+
+    <h2>Leash over the year</h2>
+    <p class="sub" id="trendSub">Median minutes between your prompts, by month.</p>
+    <div class="trend" id="trend"></div>
+  </div>
+
+  <h2>Add a machine</h2>
+  <p class="sub">Prompt on more than one computer? Drop each <code style="font-family:var(--mono)">history.jsonl</code> here — they merge, duplicates and all.</p>
+  <div class="drop" id="drop">
+    Drop <code>history.jsonl</code> files here, or click to pick<br>
+    <code>~/.claude/history.jsonl</code> · parsed in your browser, never sent anywhere
+  </div>
+  <input type="file" id="picker" multiple accept=".jsonl,application/jsonl" class="hidden">
+  <ul class="files" id="files"></ul>
+
+  <footer>
+    Everything runs client-side. The share link carries only per-day counts and lives in the URL
+    fragment, so it never reaches any server.<br>
+    <a href="https://github.com/nikitaeverywhere/promptstreak">Source on GitHub</a> ·
+    built by <a href="https://nikitaeverywhere.com">Nikita Savchenko</a> ·
+    unofficial, not affiliated with Anthropic.
+  </footer>
+</div>
+<canvas id="canvas" width="2400" height="1260"></canvas>
+<script type="module" src="./app.js"></script>
+</body>
+</html>
