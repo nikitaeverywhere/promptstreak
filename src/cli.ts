@@ -32,6 +32,14 @@ Another machine?
   ssh box 'cat ~/.claude/history.jsonl' > box.jsonl && npx promptstreak box.jsonl
 `;
 
+const tty = process.stderr.isTTY;
+const status = (msg: string) => {
+  if (tty) process.stderr.write(`\r\x1b[2K${msg}`);
+};
+const statusDone = () => {
+  if (tty) process.stderr.write("\r\x1b[2K");
+};
+
 function openUrl(url: string): void {
   const cmd = process.platform === "darwin" ? "open" : process.platform === "win32" ? "start" : "xdg-open";
   try {
@@ -64,6 +72,7 @@ async function main(): Promise<void> {
 
   const sources: PromptEvent[][] = [];
   const history = historyFiles();
+  status("Reading your prompt history…");
   for (const f of history) sources.push(parseHistory(f));
 
   // Transcripts carry the two things history cannot: real token usage, and
@@ -72,7 +81,9 @@ async function main(): Promise<void> {
   if (!flag("--local")) {
     const files = projectRoots().flatMap(findJsonl);
     if (files.length) {
-      scan = scanTranscripts(files);
+      scan = scanTranscripts(files, (done, total) => {
+        if (done % 25 === 0 || done === total) status(`Scanning transcripts… ${done}/${total}`);
+      });
       sources.push(scan.events);
     }
   }
@@ -82,7 +93,9 @@ async function main(): Promise<void> {
     sources.push(events);
   }
 
+  status("Counting…");
   const events = merge(...sources);
+  statusDone();
   if (!events.length) {
     console.error(
       history.length
@@ -93,8 +106,10 @@ async function main(): Promise<void> {
     return;
   }
 
+  // "Nikitas-MacBook-Pro", not "Nikitas-MacBook-Pro.local".
+  const machine = hostname().replace(/\.local$/, "");
   const metrics = computeMetrics(events, {
-    machines: [hostname()],
+    machines: [machine],
     ...(scan ? { tokens: scan.tokens, provenRun: { hours: scan.longestRunH, day: scan.longestRunDay } } : {}),
   });
 
@@ -107,7 +122,7 @@ async function main(): Promise<void> {
   console.log(renderGrid(metrics, metric));
   console.log(`\n${renderLegend(metric)}\n`);
 
-  const url = `${WEB_URL}/#${await encode(metrics, hostname())}`;
+  const url = `${WEB_URL}/#${await encode(metrics, machine)}`;
   if (flag("--print-url")) {
     console.log(url);
     return;

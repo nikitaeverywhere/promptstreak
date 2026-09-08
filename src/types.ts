@@ -34,6 +34,12 @@ export interface Metrics {
   days: string[];
   /** Per-metric arrays, index-aligned with `days`. */
   series: Record<MetricKey, number[]>;
+  /**
+   * Per-day counts behind the median metrics. A median cannot be merged from
+   * another median, but with the counts two machines' days combine as a
+   * prompt-weighted average instead of an average of averages.
+   */
+  aux: { leashN: number[]; typed: number[] };
   stats: Stats;
 }
 

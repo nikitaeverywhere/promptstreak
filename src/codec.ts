@@ -65,12 +65,13 @@ export interface Payload {
   from: string;
   to: string;
   series: Metrics["series"];
+  aux: Metrics["aux"];
   stats: Metrics["stats"];
   label?: string;
 }
 
 export function toPayload(m: Metrics, label?: string): Payload {
-  return { v: 1, from: m.from, to: m.to, series: m.series, stats: m.stats, ...(label ? { label } : {}) };
+  return { v: 1, from: m.from, to: m.to, series: m.series, aux: m.aux, stats: m.stats, ...(label ? { label } : {}) };
 }
 
 export async function encode(m: Metrics, label?: string): Promise<string> {

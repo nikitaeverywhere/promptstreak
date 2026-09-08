@@ -15,7 +15,9 @@ export interface Snapshot extends Payload {
 export function load(): Snapshot[] {
   try {
     const raw = localStorage.getItem(KEY);
-    return raw ? (JSON.parse(raw) as Snapshot[]) : [];
+    const list = raw ? (JSON.parse(raw) as Snapshot[]) : [];
+    // Links made before per-day counts existed still open; they just merge coarsely.
+    return list.map((s) => ({ ...s, aux: s.aux ?? { leashN: [], typed: [] } }));
   } catch {
     return [];
   }
@@ -29,10 +31,7 @@ export function save(list: Snapshot[]): void {
   }
 }
 
-/**
- * Store one snapshot per machine. Re-running the CLI on the same machine
- * replaces its entry rather than piling up near-identical years.
- */
+/** One snapshot per machine; re-running the CLI replaces, never piles up. */
 export function upsert(payload: Payload): Snapshot[] {
   const machine = payload.label || payload.stats.machines[0] || "this machine";
   const list = load().filter((s) => s.machine !== machine);
@@ -42,7 +41,7 @@ export function upsert(payload: Payload): Snapshot[] {
   return list;
 }
 
-const daysBetween = (from: string, to: string): string[] => {
+export const daysBetween = (from: string, to: string): string[] => {
   const out: string[] = [];
   const d = new Date(`${from}T12:00:00`);
   const end = new Date(`${to}T12:00:00`);
@@ -58,15 +57,17 @@ export const expand = (p: Payload): Metrics => ({
   to: p.to,
   days: daysBetween(p.from, p.to),
   series: p.series,
+  aux: p.aux,
   stats: p.stats,
 });
 
 /**
  * Combine snapshots into one view.
  *
- * Counts add up cleanly. Medians do not — you cannot recover a combined median
- * from two medians — so on the rare day two machines overlap they are averaged,
- * weighted by that day's prompts. Days on a single machine stay exact.
+ * Counts add up. The two median metrics (leash, prompt length) cannot be
+ * re-derived from other medians, so on a day two machines overlap they are
+ * averaged, weighted by that day's gap count or typed-prompt count. A day on
+ * one machine only — the usual case — stays exact.
  */
 export function combine(snaps: Snapshot[]): Metrics {
   if (snaps.length === 1) return expand(snaps[0]);
@@ -75,55 +76,54 @@ export function combine(snaps: Snapshot[]): Metrics {
   const to = snaps.map((s) => s.to).sort().at(-1)!;
   const days = daysBetween(from, to);
   const at = new Map(days.map((d, i) => [d, i]));
+  const zeros = () => new Array(days.length).fill(0);
 
-  const series = Object.fromEntries(
-    METRICS.map((m) => [m.key, new Array(days.length).fill(0)]),
-  ) as Record<MetricKey, number[]>;
-  const weight = new Array(days.length).fill(0);
+  const series = Object.fromEntries(METRICS.map((m) => [m.key, zeros()])) as Record<MetricKey, number[]>;
+  const aux = { leashN: zeros(), typed: zeros() };
 
   for (const snap of snaps) {
-    const snapDays = daysBetween(snap.from, snap.to);
-    snapDays.forEach((day, si) => {
+    daysBetween(snap.from, snap.to).forEach((day, si) => {
       const i = at.get(day);
       if (i === undefined) return;
-      const prompts = snap.series.prompts[si] ?? 0;
+      const leashN = snap.aux.leashN[si] ?? (snap.series.leash[si] ? 1 : 0);
+      const typed = snap.aux.typed[si] ?? snap.series.prompts[si] ?? 0;
       for (const m of METRICS) {
         const v = snap.series[m.key]?.[si] ?? 0;
-        if (m.median) series[m.key][i] += v * prompts; // weighted, divided below
+        if (m.key === "leash") series.leash[i] += v * leashN;
+        else if (m.key === "promptWords") series.promptWords[i] += v * typed;
         else series[m.key][i] += v;
       }
-      weight[i] += prompts;
+      aux.leashN[i] += leashN;
+      aux.typed[i] += typed;
     });
   }
-  for (const m of METRICS) {
-    if (!m.median) continue;
-    for (let i = 0; i < days.length; i++) {
-      series[m.key][i] = weight[i] ? Math.round((series[m.key][i] / weight[i]) * 10) / 10 : 0;
-    }
+  for (let i = 0; i < days.length; i++) {
+    series.leash[i] = aux.leashN[i] ? Math.round((series.leash[i] / aux.leashN[i]) * 10) / 10 : 0;
+    series.promptWords[i] = aux.typed[i] ? Math.round(series.promptWords[i] / aux.typed[i]) : 0;
   }
 
   const sum = (pick: (s: Stats) => number) => snaps.reduce((a, s) => a + pick(s.stats), 0);
-  const active = series.prompts.filter((n) => n > 0).length;
-  const leash =
-    weight.reduce((a, w, i) => a + series.leash[i] * w, 0) / (weight.reduce((a, b) => a + b, 0) || 1);
-  const medianLeashMin = Math.round(leash * 10) / 10;
-  const best = snaps.reduce((a, b) => (a.stats.totalPrompts >= b.stats.totalPrompts ? a : b)).stats;
-  const longest = snaps.reduce((a, b) =>
-    a.stats.longestUnattendedH >= b.stats.longestUnattendedH ? a : b,
-  ).stats;
+  const gapTotal = aux.leashN.reduce((a, b) => a + b, 0) || 1;
+  const medianLeashMin =
+    Math.round((series.leash.reduce((a, v, i) => a + v * aux.leashN[i], 0) / gapTotal) * 10) / 10;
+  const biggest = snaps.reduce((a, b) => (a.stats.totalPrompts >= b.stats.totalPrompts ? a : b)).stats;
+  const longest = snaps.reduce((a, b) => (a.stats.longestUnattendedH >= b.stats.longestUnattendedH ? a : b)).stats;
+  const typedTotal = sum((s) => s.typedPrompts) || 1;
 
   const stats: Stats = {
-    ...best,
+    ...biggest,
     totalPrompts: sum((s) => s.totalPrompts),
     typedPrompts: sum((s) => s.typedPrompts),
     slashCommands: sum((s) => s.slashCommands),
-    activeDays: active,
+    activeDays: series.prompts.filter((n) => n > 0).length,
     spanDays: days.length,
     words: sum((s) => s.words),
     chars: sum((s) => s.chars),
+    medianWords: Math.round(snaps.reduce((a, s) => a + s.stats.medianWords * s.stats.typedPrompts, 0) / typedTotal),
     godPrompts: sum((s) => s.godPrompts),
     godPromptDays: series.godPrompts.filter((n) => n > 0).length,
     nudges: sum((s) => s.nudges),
+    nudgeRatio: sum((s) => s.nudges) / typedTotal,
     specShaped: sum((s) => s.specShaped),
     autonomyHours: Math.round(series.autonomy.reduce((a, b) => a + b, 0)),
     overnightHandoffs: sum((s) => s.overnightHandoffs),
@@ -138,12 +138,11 @@ export function combine(snaps: Snapshot[]): Metrics {
     longestUnattendedAt: longest.longestUnattendedAt,
     maxLength: Math.max(...snaps.map((s) => s.stats.maxLength)),
     maxWords: Math.max(...snaps.map((s) => s.stats.maxWords)),
-    nudgeRatio: sum((s) => s.nudges) / (sum((s) => s.typedPrompts) || 1),
     machines: snaps.map((s) => s.machine),
     ...streaks(days, series.prompts),
   };
 
-  return { from, to, days, series, stats };
+  return { from, to, days, series, aux, stats };
 }
 
 function streaks(days: string[], prompts: number[]) {

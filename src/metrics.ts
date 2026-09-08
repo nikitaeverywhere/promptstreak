@@ -110,6 +110,7 @@ export function computeMetrics(events: PromptEvent[], opts: ComputeOptions = {})
     politeness: zeros(),
   };
 
+  const aux = { leashN: zeros(), typed: zeros() };
   const byHour = new Array(24).fill(0);
   const byProject = new Map<string, number>();
   const lengthsByDay = new Map<string, number[]>();
@@ -137,6 +138,7 @@ export function computeMetrics(events: PromptEvent[], opts: ComputeOptions = {})
     if (at.getHours() >= 22 || at.getHours() < 5) series.nightOwl[i]++;
 
     if (e.isSlash) continue;
+    aux.typed[i]++;
 
     const text = e.text;
     const trimmed = text.trim();
@@ -178,6 +180,7 @@ export function computeMetrics(events: PromptEvent[], opts: ComputeOptions = {})
     const i = index.get(day);
     if (i === undefined) continue;
     series.leash[i] = Math.round(median(mins) * 10) / 10;
+    aux.leashN[i] = mins.length;
     const idle = mins.filter((m) => m >= AUTONOMY_GAP_MIN).reduce((a, b) => a + b, 0);
     series.autonomy[i] = Math.round((idle / 60) * 10) / 10;
   }
@@ -271,7 +274,7 @@ export function computeMetrics(events: PromptEvent[], opts: ComputeOptions = {})
     ...(opts.tokens ? { tokens: opts.tokens } : {}),
   };
 
-  return { from, to, days, series, stats };
+  return { from, to, days, series, aux, stats };
 }
 
 function streaks(days: string[], active: Set<string>, to: string) {

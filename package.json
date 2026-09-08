@@ -20,7 +20,7 @@
     "test": "TZ=UTC tsx --test tests/*.test.ts",
     "web:dev": "npx --yes serve web",
     "web:deploy": "npx --yes wrangler deploy",
-    "build:web": "esbuild src/web.ts --bundle --format=esm --minify --target=es2022 --external:node:zlib --outfile=web/app.js"
+    "build:web": "esbuild src/web.ts --bundle --format=esm --minify --target=es2022 --external:node:zlib --outfile=web/app.js && node scripts/stamp.mjs"
   },
   "repository": {
     "type": "git",

@@ -10,212 +10,235 @@
 <meta property="og:type" content="website">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='3' fill='%230b0d10'/><rect x='3' y='6' width='3' height='3' rx='1' fill='%2340c463'/><rect x='7' y='3' width='3' height='3' rx='1' fill='%23ffd34d'/><rect x='7' y='10' width='3' height='3' rx='1' fill='%2330a14e'/><rect x='11' y='6' width='3' height='3' rx='1' fill='%23216e39'/></svg>">
 <style>
-  :root {
-    --bg:#0b0d10; --panel:#12161b; --panel2:#0e1216; --line:#1e242c; --line2:#262e38;
-    --ink:#e8edf3; --mute:#8a97a6; --faint:#5a6673; --empty:#161c24; --empty2:#1a212a;
-    --g1:#0e4429; --g2:#216e39; --g3:#30a14e; --g4:#40c463;
-    --gold:#ffd34d; --gold2:#c99a20;
+  :root{
+    --bg:#0b0d10;--panel:#12161b;--panel2:#0e1216;--line:#1f262e;--line2:#2b3440;
+    --ink:#e8edf3;--mute:#8a97a6;--faint:#5a6673;--empty:#171d25;
+    --g1:#0e4429;--g2:#216e39;--g3:#30a14e;--g4:#40c463;--gold:#ffd34d;--gold2:#c99a20;
     --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
-    --ease:cubic-bezier(.22,.61,.36,1);
+    --ease:cubic-bezier(.22,.61,.36,1);--cs:12px;--cg:3px;
   }
   *{box-sizing:border-box}
+  html{background:var(--bg)}
   body{margin:0;background:var(--bg);color:var(--ink);
-    font:400 15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,system-ui,sans-serif;
-    -webkit-font-smoothing:antialiased}
-  .wrap{max-width:1080px;margin:0 auto;padding:36px 20px 80px}
+    font:400 15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1080px;margin:0 auto;padding:36px 20px 72px}
+  button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+  :focus-visible{outline:2px solid var(--g4);outline-offset:2px;border-radius:6px}
+  .hidden{display:none!important}
 
-  header{margin-bottom:22px}
-  h1{font-size:21px;margin:0;letter-spacing:-.01em;font-weight:700}
+  /* header */
+  header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:18px}
+  h1{font-size:21px;margin:0;letter-spacing:-.01em;font-weight:700;line-height:1.2}
   h1 b{color:var(--g4)}
-  .sub1{font-size:14px;color:var(--mute);margin-top:2px}
+  .tag{font-size:14px;color:var(--mute);margin-top:2px}
+  .cta{display:flex;flex-direction:column;align-items:flex-end;gap:5px}
+  .cta button{display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid var(--line);border-radius:9px;
+    background:var(--panel);font:500 14px var(--mono);transition:border-color .15s}
+  .cta button:hover{border-color:var(--faint)}
+  .cta button svg{width:14px;height:14px;color:var(--mute)}
+  .cta small{font-size:12px;color:var(--faint)}
+  .cta small b{font-weight:500;color:var(--mute)}
 
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px 24px 20px}
-  .head{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;margin-bottom:20px;flex-wrap:wrap}
-  .picks{display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap}
-
+  /* card */
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 24px 20px}
+  .head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:18px;min-height:46px}
+  .card[data-empty] .head{display:none}
+  .picks{display:flex;gap:26px;align-items:flex-start;flex-wrap:wrap}
   .dd{position:relative}
-  .dd>button{font:inherit;display:flex;flex-direction:column;align-items:flex-start;gap:1px;
-    background:none;border:0;padding:0;cursor:pointer;color:var(--ink);text-align:left}
-  .dd>button .t{font-size:23px;font-weight:700;letter-spacing:-.02em;display:flex;align-items:center;gap:7px}
-  .dd>button .t svg{opacity:.5;transition:transform .2s var(--ease)}
-  .dd[data-open] > button .t svg{transform:rotate(180deg)}
-  .dd>button .d{font-size:13px;color:var(--mute);font-weight:400;max-width:46ch}
-  .dd.opt>button .t{font-size:15px;font-weight:500;color:var(--mute);padding-top:6px}
-  .dd.opt[data-on]>button .t{color:var(--gold)}
-
-  .menu{position:absolute;top:calc(100% + 8px);left:-10px;z-index:40;min-width:300px;
-    background:var(--panel2);border:1px solid var(--line2);border-radius:12px;padding:6px;
-    box-shadow:0 18px 44px rgba(0,0,0,.6);opacity:0;transform:translateY(-6px) scale(.985);
-    pointer-events:none;transition:opacity .16s var(--ease),transform .16s var(--ease)}
+  .dd>button{display:flex;flex-direction:column;align-items:flex-start;gap:1px;text-align:left}
+  .dd .t{display:flex;align-items:center;gap:6px;font-size:21px;font-weight:700;letter-spacing:-.02em;line-height:1.2}
+  .dd .t svg{width:12px;height:12px;color:var(--faint);transition:transform .18s var(--ease)}
+  .dd[data-open] .t svg{transform:rotate(180deg)}
+  .dd .d{font-size:12.5px;color:var(--mute)}
+  .dd.over .t{color:var(--mute);font-weight:600}
+  .dd.over[data-on] .t{color:var(--gold)}
+  .dd.over[data-on] .t svg{color:var(--gold2)}
+  .menu{position:absolute;top:calc(100% + 8px);left:-8px;z-index:40;width:290px;max-height:min(70vh,520px);overflow:auto;
+    background:var(--panel2);border:1px solid var(--line2);border-radius:11px;padding:6px;
+    box-shadow:0 16px 40px rgba(0,0,0,.6);opacity:0;transform:translateY(-6px);pointer-events:none;transition:opacity .14s var(--ease),transform .14s var(--ease)}
   .dd[data-open] .menu{opacity:1;transform:none;pointer-events:auto}
-  .menu .grp{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--faint);padding:9px 10px 5px}
-  .menu button{display:block;width:100%;text-align:left;font:inherit;background:none;border:0;
-    padding:7px 10px;border-radius:8px;cursor:pointer;color:var(--ink)}
+  .menu .grp{font-size:11px;color:var(--faint);padding:8px 10px 4px}
+  .menu button{display:block;width:100%;text-align:left;padding:7px 10px;border-radius:7px}
   .menu button:hover{background:#171d24}
-  .menu button[aria-pressed="true"]{background:#161d25}
   .menu button[aria-pressed="true"] .mt{color:var(--g4)}
-  .menu .mt{font-size:14px;font-weight:500;display:block}
-  .menu .md{font-size:12px;color:var(--mute);display:block;margin-top:1px}
-
-  .cta{text-align:right;font-family:var(--mono);font-size:14px;line-height:1.35;flex-shrink:0}
-  .cta b{color:var(--ink);font-weight:500}
-  .cta span{display:block;font-family:inherit;font-size:12px;color:var(--faint);font-weight:400}
+  .menu .mt{font-size:14px;font-weight:500;display:block;line-height:1.3}
+  .menu .md{font-size:12px;color:var(--mute);display:block;margin-top:1px;line-height:1.35}
+  .menu .compact button{padding:6px 10px}
+  .menu .compact .md{display:none}
+  .icons{display:flex;gap:6px;flex-shrink:0}
+  .ico{width:32px;height:32px;display:grid;place-items:center;border-radius:8px;border:1px solid var(--line);color:var(--mute);transition:.15s var(--ease)}
+  .ico:hover{color:var(--ink);border-color:var(--faint)}
+  .ico svg{width:15px;height:15px}
 
   /* calendar */
-  .cal{display:flex;gap:8px;align-items:flex-start}
-  .wd{display:grid;grid-template-rows:repeat(7,var(--cs));gap:var(--cg);font-size:9px;color:var(--faint);
-    padding-top:17px;text-align:right;line-height:var(--cs);flex-shrink:0}
-  .calmain{flex:1;min-width:0}
-  .months{display:flex;height:16px;font-size:11px;color:var(--mute)}
-  .cols{display:flex;gap:var(--cg);width:100%}
-  .col{display:grid;grid-template-rows:repeat(7,var(--cs));gap:var(--cg);flex:1;min-width:0;position:relative}
-  .col.zeb::before{content:"";position:absolute;inset:-4px -1.5px;background:#ffffff05;border-radius:2px;pointer-events:none}
-  .col.mstart::after{content:"";position:absolute;left:calc(-1 * var(--cg) / 2 - .5px);top:-6px;bottom:-6px;
-    width:1px;background:var(--line2);pointer-events:none}
-  .cell{border-radius:2px;background:var(--empty);transition:background .35s var(--ease),transform .12s var(--ease);
-    animation:pop .4s var(--ease) backwards}
-  .cell[data-l="1"]{background:var(--g1)} .cell[data-l="2"]{background:var(--g2)}
-  .cell[data-l="3"]{background:var(--g3)} .cell[data-l="4"]{background:var(--g4)}
+  .calwrap{overflow-x:auto;overflow-y:hidden;padding:2px 0 4px}
+  .cal{display:flex;gap:6px;width:max-content;margin:0 auto}
+  .wd{display:grid;grid-template-rows:repeat(7,var(--cs));gap:var(--cg);padding-top:18px;font-size:9px;color:var(--faint);text-align:right;width:12px}
+  .wd span{line-height:var(--cs)}
+  .months{display:flex;gap:var(--cg);height:18px;font-size:11px;color:var(--mute)}
+  .months span{width:var(--cs);white-space:nowrap;overflow:visible}
+  .cols{display:flex;gap:var(--cg)}
+  .col{display:grid;grid-template-rows:repeat(7,var(--cs));gap:var(--cg);width:var(--cs);position:relative}
+  .col.zeb::before{content:"";position:absolute;inset:-5px calc(var(--cg) / -2);background:rgba(255,255,255,.04);pointer-events:none}
+  .col.mstart::after{content:"";position:absolute;left:calc(var(--cg) / -2 - .5px);top:-6px;bottom:-6px;width:1px;background:var(--line2);pointer-events:none}
+  .cell{width:var(--cs);height:var(--cs);border-radius:2px;background:var(--empty);position:relative;
+    transition:background .3s var(--ease),transform .1s var(--ease);animation:pop .35s var(--ease) backwards}
+  .cell[data-l="1"]{background:var(--g1)}.cell[data-l="2"]{background:var(--g2)}
+  .cell[data-l="3"]{background:var(--g3)}.cell[data-l="4"]{background:var(--g4)}
   .cell[data-gold="1"]{background:var(--gold2)}
-  .cell[data-gold="2"]{background:var(--gold);box-shadow:0 0 7px rgba(255,211,77,.5)}
+  .cell[data-gold="2"]{background:var(--gold);box-shadow:0 0 6px rgba(255,211,77,.45)}
   .cell[data-void]{background:transparent}
-  .cell:hover{transform:scale(1.42);z-index:5;position:relative}
-  @keyframes pop{from{opacity:0;transform:scale(.4)}to{opacity:1;transform:none}}
-  @media (prefers-reduced-motion:reduce){.cell{animation:none;transition:none}}
+  .cell[data-day]:hover{transform:scale(1.35);z-index:5}
+  @keyframes pop{from{opacity:0;transform:scale(.5)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.cell{animation:none!important;transition:none}.menu{transition:none}}
 
-  #tip{position:fixed;z-index:90;pointer-events:none;background:#05070a;border:1px solid var(--line2);
-    border-radius:9px;padding:8px 11px;font-size:12.5px;line-height:1.5;opacity:0;transform:translateY(4px);
-    transition:opacity .12s,transform .12s;max-width:260px;box-shadow:0 12px 30px rgba(0,0,0,.6)}
+  #tip{position:fixed;z-index:90;pointer-events:none;background:#05070a;border:1px solid var(--line2);border-radius:9px;
+    padding:8px 11px;font-size:12.5px;line-height:1.45;opacity:0;transform:translateY(4px);transition:opacity .1s,transform .1s;max-width:240px}
   #tip[data-show]{opacity:1;transform:none}
   #tip b{display:block;font-size:13px;margin-bottom:2px}
   #tip i{color:var(--mute);font-style:normal}
-  #tip em{color:var(--gold);font-style:normal;display:block;margin-top:3px}
+  #tip em{color:var(--gold);font-style:normal;display:block}
 
-  .facts{display:flex;gap:26px;flex-wrap:wrap;margin-top:20px;padding-top:17px;border-top:1px solid var(--line)}
-  .fact b{font-family:var(--mono);font-size:19px;display:block;letter-spacing:-.02em}
-  .fact span{font-size:12px;color:var(--mute)}
+  .facts{display:flex;gap:36px;flex-wrap:wrap;margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
+  .fact b{font-family:var(--mono);font-size:20px;font-weight:600;display:block;letter-spacing:-.02em;line-height:1.2}
+  .fact span{font-size:12.5px;color:var(--mute)}
   .fact.g b{color:var(--gold)}
-  .fact.wide b{font-size:19px}
   .from{margin-top:12px;font-size:12px;color:var(--faint)}
+  .facts .snake b{font-size:18px}
 
-  .tools{display:flex;gap:8px;margin:16px 0 0;align-items:center}
-  .ico{width:34px;height:34px;display:grid;place-items:center;border-radius:9px;cursor:pointer;
-    background:none;border:1px solid var(--line);color:var(--mute);transition:.15s var(--ease)}
-  .ico:hover{color:var(--ink);border-color:var(--faint);background:#151a20}
-  .ico svg{width:16px;height:16px}
-  .toast{font-size:12.5px;color:var(--g4);opacity:0;transition:opacity .2s}
-  .toast[data-show]{opacity:1}
-
-  section{margin-top:44px}
-  h2{font-size:14px;margin:0 0 3px;font-weight:600}
+  /* below the card */
+  section{margin-top:36px}
+  h2{font-size:14px;font-weight:600;margin:0 0 4px}
   .sub{font-size:13px;color:var(--mute);margin:0 0 14px}
-  .grid2{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:16px 20px}
-  .s b{font-family:var(--mono);font-size:16px;display:block}
-  .s span{font-size:12px;color:var(--mute)}
+  .barwrap{overflow-x:auto}
+  .bars{display:flex;align-items:flex-end;gap:6px;border-bottom:1px solid var(--line);min-width:100%}
+  .bar{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1 1 44px;max-width:88px;min-width:36px}
+  .bar i{width:22px;background:var(--g2);border-radius:3px 3px 0 0;min-height:3px;transition:height .4s var(--ease)}
+  .bar.last i{background:var(--g4)}
+  .bar span{font-size:11px;color:var(--faint);margin-bottom:6px}
 
-  .trend{display:flex;gap:3px;align-items:flex-end;height:44px}
-  .trend i{flex:1;background:var(--g2);border-radius:3px 3px 0 0;min-height:2px;
-    transition:height .45s var(--ease),background .3s}
-  .trend i.last{background:var(--g4)}
-  .tlabels{display:flex;gap:3px;margin-top:5px;font-size:10px;color:var(--faint)}
-  .tlabels span{flex:1;text-align:center;overflow:hidden}
+  details.more{margin-top:36px}
+  details.more summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;width:max-content}
+  details.more summary::-webkit-details-marker{display:none}
+  details.more summary svg{width:12px;height:12px;color:var(--faint);transition:transform .18s var(--ease)}
+  details.more[open] summary svg{transform:rotate(180deg)}
+  details.more summary small{font-weight:400;color:var(--faint);margin-left:4px}
+  .groups{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:28px 36px;margin-top:18px}
+  .group h3{font-size:13px;font-weight:600;margin:0 0 10px;color:var(--ink)}
+  .group .r{display:flex;align-items:baseline;gap:8px;padding:4px 0}
+  .group .r b{font-family:var(--mono);font-size:15px;font-weight:600;min-width:78px}
+  .group .r span{font-size:13px;color:var(--mute)}
+  .group .note{font-size:12px;color:var(--faint);margin-top:8px}
 
-  .machines{display:flex;flex-direction:column;gap:2px}
-  .m{display:flex;align-items:center;gap:12px;padding:9px 2px;cursor:pointer;border-radius:8px;transition:.12s}
-  .m:hover{background:#10151a}
-  .m input{accent-color:var(--g3);width:15px;height:15px;cursor:pointer;flex-shrink:0}
-  .m .nm{font-family:var(--mono);font-size:13px}
-  .m .meta{font-size:12px;color:var(--faint)}
-  .m .rm{margin-left:auto;background:none;border:0;color:var(--faint);cursor:pointer;font-size:17px;
-    padding:0 5px;line-height:1;opacity:0;transition:.12s}
-  .m:hover .rm{opacity:1}
-  .m .rm:hover{color:var(--ink)}
-  .drop{border:1px dashed var(--line2);border-radius:11px;padding:16px;text-align:center;color:var(--faint);
-    font-size:13px;cursor:pointer;transition:.15s var(--ease);margin-top:10px}
-  .drop:hover,.drop.over{border-color:var(--g3);color:var(--ink);background:#0f1519}
-  .cmd{display:flex;align-items:center;gap:10px;background:#06080b;border:1px solid var(--line);
-    border-radius:10px;padding:11px 14px;font-family:var(--mono);font-size:14px;max-width:520px}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .chip{display:flex;align-items:center;gap:8px;padding:7px 12px;border:1px solid var(--line);border-radius:999px;font:13px var(--mono);
+    background:var(--panel);transition:.15s var(--ease);position:relative}
+  .chip[data-on]{border-color:var(--g3);background:#0f1a14}
+  .chip:not([data-on]){color:var(--faint)}
+  .chip i{width:8px;height:8px;border-radius:50%;background:var(--faint);flex-shrink:0}
+  .chip[data-on] i{background:var(--g4)}
+  .chip .meta{color:var(--faint);font-size:12px}
+  .chip .rm{width:18px;height:18px;display:grid;place-items:center;border-radius:50%;color:var(--faint);margin:0 -4px 0 2px;opacity:.55}
+  .chip .rm:hover{color:var(--ink);background:#1a2129;opacity:1}
+  .chip.add{border-style:dashed;font-family:inherit;color:var(--mute)}
+  .chip.add:hover{color:var(--ink);border-color:var(--faint)}
+  .addpanel{margin-top:14px;display:flex;flex-direction:column;gap:10px;max-width:560px}
+  .cmd{display:flex;align-items:center;gap:10px;background:#06080b;border:1px solid var(--line);border-radius:10px;padding:10px 12px 10px 14px;font:14px var(--mono)}
   .cmd s{color:var(--faint);text-decoration:none}
-  .cmd code{flex:1;color:var(--ink)}
+  .cmd code{flex:1}
+  .cmd .ico{width:28px;height:28px}
+  .drop{border:1px dashed var(--line2);border-radius:10px;padding:12px;text-align:center;color:var(--faint);font-size:13px;cursor:pointer;transition:.15s}
+  .drop:hover,.drop.over{border-color:var(--g3);color:var(--ink);background:#0f1519}
+  .drop code{font-family:var(--mono)}
 
-  footer{margin-top:60px;padding-top:22px;border-top:1px solid var(--line);font-size:12.5px;color:var(--faint);line-height:1.75}
+  footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);font-size:12.5px;color:var(--faint);line-height:1.7}
   footer a{color:var(--mute)}
-  .hint{font-size:12px;color:var(--faint);margin-top:10px}
-  .hidden{display:none!important}
+  .toast{position:fixed;left:50%;bottom:28px;transform:translate(-50%,8px);background:#05070a;border:1px solid var(--line2);color:var(--ink);
+    padding:8px 14px;border-radius:9px;font-size:13px;opacity:0;transition:.18s var(--ease);pointer-events:none;z-index:95}
+  .toast[data-show]{opacity:1;transform:translate(-50%,0)}
   canvas#canvas{display:none}
+
+  @media (max-width:720px){
+    .wrap{padding:24px 14px 56px}
+    header{flex-direction:column}
+    .cta{align-items:flex-start}
+    .card{padding:16px 14px 16px;border-radius:12px}
+    .picks{gap:18px}
+    .dd .t{font-size:18px}
+    .facts{gap:18px 28px}
+    .groups{grid-template-columns:1fr}
+    .bars{gap:4px}
+    .bar{min-width:24px;max-width:none}
+    .bar i{width:14px}
+    .bar span{font-size:10px}
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <h1>prompt<b>streak</b></h1>
-    <div class="sub1">A year of prompting</div>
+    <div><h1>prompt<b>streak</b></h1><div class="tag">A year of prompting</div></div>
+    <div class="cta">
+      <button id="cta" title="Copy the command">npx promptstreak
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      </button>
+      <small>paste in a terminal to get yours <b>·</b> needs <b>Node.js</b>, reads your local Claude Code history</small>
+    </div>
   </header>
 
-  <div class="card">
+  <div class="card" id="card">
     <div class="head">
-      <div class="picks">
+      <div class="picks" id="picks">
         <div class="dd" id="ddMain"></div>
-        <div class="dd opt" id="ddOver"></div>
+        <div class="dd over" id="ddOver"></div>
       </div>
-      <div class="cta"><b>npx promptstreak</b><span>to get yours</span></div>
+      <div class="icons" id="icons">
+        <button class="ico" id="png" title="Download as PNG" aria-label="Download as PNG"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg></button>
+        <button class="ico" id="link" title="Copy share link" aria-label="Copy share link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"></path><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"></path></svg></button>
+      </div>
     </div>
-
-    <div class="cal" id="cal">
+    <div class="calwrap"><div class="cal">
       <div class="wd" id="wd"></div>
-      <div class="calmain">
-        <div class="months" id="months"></div>
-        <div class="cols" id="cols"></div>
-      </div>
-    </div>
-
+      <div><div class="months" id="months"></div><div class="cols" id="cols"></div></div>
+    </div></div>
     <div class="facts" id="facts"></div>
     <div class="from hidden" id="from"></div>
   </div>
 
-  <div class="tools" id="tools">
-    <button class="ico" id="png" title="Download PNG" aria-label="Download PNG">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-    </button>
-    <button class="ico" id="link" title="Copy share link" aria-label="Copy share link">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>
-    </button>
-    <span class="toast" id="toast"></span>
-  </div>
-
-  <section id="secondary" class="hidden">
-    <h2 id="trendH">Leash by month</h2>
+  <section id="bymonth" class="hidden">
+    <h2 id="trendH">Prompts by month</h2>
     <p class="sub" id="trendSub"></p>
-    <div class="trend" id="trend"></div>
-    <div class="tlabels" id="tlabels"></div>
-
-    <h2 style="margin-top:40px">The rest of it</h2>
-    <p class="sub" id="restSub">Everything the graph does not show.</p>
-    <div class="grid2" id="rest"></div>
+    <div class="barwrap"><div class="bars" id="bars"></div></div>
   </section>
 
-  <section>
+  <details class="more hidden" id="more">
+    <summary>More numbers <small id="moreHint"></small>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+    </summary>
+    <div class="groups" id="groups"></div>
+  </details>
+
+  <section id="machinesSec">
     <h2>Machines</h2>
-    <p class="sub" id="mSub">Run <code style="font-family:var(--mono)">npx promptstreak</code> on another computer and open the link it gives you — it gets saved here, and you can plot them together.</p>
-    <div class="machines" id="machines"></div>
-    <div class="cmd" style="margin-top:12px"><s>$</s><code>npx promptstreak</code>
-      <button class="ico" id="copyCmd" title="Copy" aria-label="Copy command" style="width:28px;height:28px">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-      </button>
+    <p class="sub">Prompting on more than one computer? Run the command there, open the link it prints, and it shows up here.</p>
+    <div class="chips" id="chips"></div>
+    <div class="addpanel hidden" id="addpanel">
+      <div class="cmd"><s>$</s><code>npx promptstreak</code>
+        <button class="ico" id="copyCmd" title="Copy" aria-label="Copy command"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>
+      </div>
+      <div class="drop" id="drop">or drop a <code>history.jsonl</code> here — parsed in your browser, never uploaded</div>
+      <input type="file" id="picker" multiple accept=".jsonl" class="hidden">
     </div>
-    <div class="drop" id="drop">or drop a <code style="font-family:var(--mono)">history.jsonl</code> file here</div>
-    <input type="file" id="picker" multiple accept=".jsonl" class="hidden">
   </section>
 
   <footer>
     Everything runs in the browser only. The share link carries view data only, never the source.<br>
-    <a href="/" id="domain">promptstreak</a> ·
-    <a href="https://github.com/nikitaeverywhere/promptstreak">Source</a> ·
-    built by <a href="https://nikitaeverywhere.com">Nikita Savchenko</a>
+    <a href="/" id="domain">promptstreak</a> · <a href="https://github.com/nikitaeverywhere/promptstreak">Source</a> · built by <a href="https://nikitaeverywhere.com">Nikita Savchenko</a>
   </footer>
 </div>
 <div id="tip"></div>
+<div class="toast" id="toast"></div>
 <canvas id="canvas" width="2400" height="1260"></canvas>
-<script type="module" src="./app.js"></script>
+<script type="module" src="./app.js?v=ee68af10bd"></script>
 </body>
 </html>

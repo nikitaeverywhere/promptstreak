@@ -37,22 +37,12 @@ export function stopSnake(): void {
   state = null;
 }
 
-export function startSnake(
-  colsEl: HTMLElement,
-  wdEl: HTMLElement,
-  monthsEl: HTMLElement,
-  factsEl: HTMLElement,
-): void {
+export function startSnake(colsEl: HTMLElement, factsEl: HTMLElement, size: number): void {
   stopSnake();
 
-  const width = colsEl.clientWidth || 900;
-  const cols = Math.max(20, Math.min(53, Math.floor(width / 17)));
-  const size = Math.max(8, Math.min(15, Math.floor(width / cols) - 3));
+  const cols = 52;
   document.documentElement.style.setProperty("--cs", `${size}px`);
   document.documentElement.style.setProperty("--cg", `3px`);
-
-  wdEl.replaceChildren();
-  monthsEl.replaceChildren();
   colsEl.replaceChildren();
 
   const cells: HTMLElement[][] = [];
@@ -87,10 +77,10 @@ export function startSnake(
 
   factsEl.replaceChildren();
   const wrap = document.createElement("div");
-  wrap.className = "fact wide";
+  wrap.className = "fact snake";
   scoreEl = document.createElement("b");
   const hint = document.createElement("span");
-  hint.textContent = "arrow keys or WASD to take over — this is your graph, once you have one";
+  hint.textContent = "Nothing here yet — run npx promptstreak to see your year. Arrow keys or WASD to play meanwhile.";
   wrap.append(scoreEl, hint);
   factsEl.append(wrap);
   paintScore();
