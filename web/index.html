@@ -11,150 +11,167 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='3' fill='%230b0d10'/><rect x='3' y='6' width='3' height='3' rx='1' fill='%2340c463'/><rect x='7' y='3' width='3' height='3' rx='1' fill='%23ffd34d'/><rect x='7' y='10' width='3' height='3' rx='1' fill='%2330a14e'/><rect x='11' y='6' width='3' height='3' rx='1' fill='%23216e39'/></svg>">
 <style>
   :root{
-    --bg:#0b0d10;--panel:#12161b;--panel2:#0e1216;--line:#1f262e;--line2:#2b3440;
-    --ink:#e8edf3;--mute:#8a97a6;--faint:#5a6673;--empty:#171d25;
-    --g1:#0e4429;--g2:#216e39;--g3:#30a14e;--g4:#40c463;--gold:#ffd34d;--gold2:#c99a20;
+    --bg:#0b0d10;--panel:#12161b;--panel2:#0e1216;--glass:rgba(22,27,33,.55);--line:#1f262e;--line2:#2f3945;
+    --ink:#e8edf3;--mute:#8a97a6;--faint:#5a6673;--empty:#171d25;--empty2:#1b222b;
+    --g1:#0e4429;--g2:#216e39;--g3:#30a14e;--g4:#40c463;
+    --n1:#2e1a5e;--n2:#4c2a94;--n3:#7c4fd6;--n4:#a78bfa;
+    --gold:#ffd34d;--gold2:#c99a20;
     --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
     --ease:cubic-bezier(.22,.61,.36,1);--cs:12px;--cg:3px;
   }
   *{box-sizing:border-box}
   html{background:var(--bg)}
   body{margin:0;background:var(--bg);color:var(--ink);
-    font:400 15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
-  .wrap{max-width:1080px;margin:0 auto;padding:36px 20px 72px}
+    font:400 16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1080px;margin:0 auto;padding:36px 20px 64px}
   button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
   :focus-visible{outline:2px solid var(--g4);outline-offset:2px;border-radius:6px}
   .hidden{display:none!important}
 
   /* header */
-  header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:18px}
-  h1{font-size:21px;margin:0;letter-spacing:-.01em;font-weight:700;line-height:1.2}
+  header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:20px}
+  h1{font-size:22px;margin:0;letter-spacing:-.01em;font-weight:700;line-height:1.2}
   h1 b{color:var(--g4)}
-  .tag{font-size:14px;color:var(--mute);margin-top:2px}
-  .cta{display:flex;flex-direction:column;align-items:flex-end;gap:5px}
-  .cta button{display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid var(--line);border-radius:9px;
-    background:var(--panel);font:500 14px var(--mono);transition:border-color .15s}
+  .tag{font-size:15px;color:var(--mute);margin-top:2px}
+  .cta{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+  .cta button{display:flex;align-items:center;gap:10px;padding:9px 13px;border:1px solid var(--line);border-radius:9px;
+    background:var(--panel);font:500 15px var(--mono);transition:border-color .15s}
   .cta button:hover{border-color:var(--faint)}
   .cta button svg{width:14px;height:14px;color:var(--mute)}
-  .cta small{font-size:12px;color:var(--faint)}
-  .cta small b{font-weight:500;color:var(--mute)}
+  .cta small{font-size:13px;color:var(--faint)}
+
+  /* help marks */
+  .q{display:inline-grid;place-items:center;width:17px;height:17px;border-radius:50%;border:1px solid var(--line2);color:var(--faint);
+    font-size:11px;font-weight:600;vertical-align:1px;margin-left:6px;transition:.15s}
+  .q:hover{color:var(--ink);border-color:var(--faint)}
 
   /* card */
   .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 24px 20px}
-  .head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:18px;min-height:46px}
-  .card[data-empty] .head{display:none}
-  .picks{display:flex;gap:26px;align-items:flex-start;flex-wrap:wrap}
+  .head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:18px}
+  .picks{display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap}
   .dd{position:relative}
-  .dd>button{display:flex;flex-direction:column;align-items:flex-start;gap:1px;text-align:left}
-  .dd .t{display:flex;align-items:center;gap:6px;font-size:21px;font-weight:700;letter-spacing:-.02em;line-height:1.2}
+  .dd>button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left}
+  .dd>button:disabled{cursor:default}
+  .dd .t{display:flex;align-items:center;gap:6px;font-size:22px;font-weight:700;letter-spacing:-.02em;line-height:1.2}
   .dd .t svg{width:12px;height:12px;color:var(--faint);transition:transform .18s var(--ease)}
   .dd[data-open] .t svg{transform:rotate(180deg)}
-  .dd .d{font-size:12.5px;color:var(--mute)}
+  .dd .d{font-size:13.5px;color:var(--mute)}
+  .dd.over{opacity:.38;transition:opacity .15s}
+  .dd.over:hover,.dd.over[data-open],.dd.over[data-on]{opacity:1}
   .dd.over .t{color:var(--mute);font-weight:600}
   .dd.over[data-on] .t{color:var(--gold)}
-  .dd.over[data-on] .t svg{color:var(--gold2)}
-  .menu{position:absolute;top:calc(100% + 8px);left:-8px;z-index:40;width:290px;max-height:min(70vh,520px);overflow:auto;
+  .dd.over[data-on][data-night] .t{color:var(--n4)}
+  .dd.over[data-on] .t svg{color:inherit;opacity:.7}
+  .dd.wait .t{color:var(--mute)}
+  .menu{position:absolute;top:calc(100% + 8px);left:-8px;z-index:40;width:360px;max-height:min(72vh,560px);overflow:auto;
     background:var(--panel2);border:1px solid var(--line2);border-radius:11px;padding:6px;
     box-shadow:0 16px 40px rgba(0,0,0,.6);opacity:0;transform:translateY(-6px);pointer-events:none;transition:opacity .14s var(--ease),transform .14s var(--ease)}
   .dd[data-open] .menu{opacity:1;transform:none;pointer-events:auto}
-  .menu .grp{font-size:11px;color:var(--faint);padding:8px 10px 4px}
+  .menu .grp{font-size:11.5px;color:var(--faint);padding:8px 10px 4px}
   .menu button{display:block;width:100%;text-align:left;padding:7px 10px;border-radius:7px}
   .menu button:hover{background:#171d24}
   .menu button[aria-pressed="true"] .mt{color:var(--g4)}
-  .menu .mt{font-size:14px;font-weight:500;display:block;line-height:1.3}
-  .menu .md{font-size:12px;color:var(--mute);display:block;margin-top:1px;line-height:1.35}
-  .menu .compact button{padding:6px 10px}
-  .menu .compact .md{display:none}
+  .menu .mt{font-size:15px;font-weight:500;display:block;line-height:1.3}
+  .menu .md{font-size:12.5px;color:var(--mute);display:block;margin-top:1px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .icons{display:flex;gap:6px;flex-shrink:0}
-  .ico{width:32px;height:32px;display:grid;place-items:center;border-radius:8px;border:1px solid var(--line);color:var(--mute);transition:.15s var(--ease)}
+  .ico{width:34px;height:34px;display:grid;place-items:center;border-radius:8px;border:1px solid var(--line);color:var(--mute);transition:.15s var(--ease)}
   .ico:hover{color:var(--ink);border-color:var(--faint)}
   .ico svg{width:15px;height:15px}
 
   /* calendar */
   .calwrap{overflow-x:auto;overflow-y:hidden;padding:2px 0 4px}
   .cal{display:flex;gap:6px;width:max-content;margin:0 auto}
-  .wd{display:grid;grid-template-rows:repeat(7,var(--cs));gap:var(--cg);padding-top:18px;font-size:9px;color:var(--faint);text-align:right;width:12px}
+  .wd{display:grid;grid-template-rows:repeat(7,var(--cs));gap:var(--cg);padding-top:20px;font-size:10px;color:var(--faint);text-align:right;width:12px}
   .wd span{line-height:var(--cs)}
-  .months{display:flex;gap:var(--cg);height:18px;font-size:11px;color:var(--mute)}
-  .months span{width:var(--cs);white-space:nowrap;overflow:visible}
-  .cols{display:flex;gap:var(--cg)}
-  .col{display:grid;grid-template-rows:repeat(7,var(--cs));gap:var(--cg);width:var(--cs);position:relative}
-  .col.zeb::before{content:"";position:absolute;inset:-5px calc(var(--cg) / -2);background:rgba(255,255,255,.04);pointer-events:none}
-  .col.mstart::after{content:"";position:absolute;left:calc(var(--cg) / -2 - .5px);top:-6px;bottom:-6px;width:1px;background:var(--line2);pointer-events:none}
+  .months{display:flex;gap:var(--cg);height:20px;font-size:12px;color:var(--mute)}
+  .months span{width:var(--cs);white-space:nowrap}
+  .cols{display:flex;gap:var(--cg);position:relative}
+  .col{display:grid;grid-template-rows:repeat(7,var(--cs));gap:var(--cg);width:var(--cs)}
+  .ml{position:absolute;background:var(--line2);pointer-events:none}
   .cell{width:var(--cs);height:var(--cs);border-radius:2px;background:var(--empty);position:relative;
     transition:background .3s var(--ease),transform .1s var(--ease);animation:pop .35s var(--ease) backwards}
+  .cell[data-odd][data-l="0"]{background:var(--empty2)}
   .cell[data-l="1"]{background:var(--g1)}.cell[data-l="2"]{background:var(--g2)}
   .cell[data-l="3"]{background:var(--g3)}.cell[data-l="4"]{background:var(--g4)}
-  .cell[data-gold="1"]{background:var(--gold2)}
-  .cell[data-gold="2"]{background:var(--gold);box-shadow:0 0 6px rgba(255,211,77,.45)}
+  .cal[data-night] .cell[data-l="1"]{background:var(--n1)}.cal[data-night] .cell[data-l="2"]{background:var(--n2)}
+  .cal[data-night] .cell[data-l="3"]{background:var(--n3)}.cal[data-night] .cell[data-l="4"]{background:var(--n4)}
+  .cell[data-l][data-ov="1"]{background:var(--gold2)}
+  .cell[data-l][data-ov="2"]{background:var(--gold);box-shadow:0 0 6px rgba(255,211,77,.45)}
+  .cal[data-ovnight] .cell[data-l][data-ov="1"]{background:var(--n3);box-shadow:none}
+  .cal[data-ovnight] .cell[data-l][data-ov="2"]{background:var(--n4);box-shadow:0 0 6px rgba(167,139,250,.45)}
   .cell[data-void]{background:transparent}
   .cell[data-day]:hover{transform:scale(1.35);z-index:5}
   @keyframes pop{from{opacity:0;transform:scale(.5)}to{opacity:1;transform:none}}
   @media (prefers-reduced-motion:reduce){.cell{animation:none!important;transition:none}.menu{transition:none}}
 
   #tip{position:fixed;z-index:90;pointer-events:none;background:#05070a;border:1px solid var(--line2);border-radius:9px;
-    padding:8px 11px;font-size:12.5px;line-height:1.45;opacity:0;transform:translateY(4px);transition:opacity .1s,transform .1s;max-width:240px}
+    padding:8px 11px;font-size:13px;line-height:1.45;opacity:0;transform:translateY(4px);transition:opacity .1s,transform .1s;max-width:280px}
   #tip[data-show]{opacity:1;transform:none}
-  #tip b{display:block;font-size:13px;margin-bottom:2px}
+  #tip b{display:block;font-size:13.5px;margin-bottom:2px}
   #tip i{color:var(--mute);font-style:normal}
   #tip em{color:var(--gold);font-style:normal;display:block}
+  #tip em.n{color:var(--n4)}
 
   .facts{display:flex;gap:36px;flex-wrap:wrap;margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
-  .fact b{font-family:var(--mono);font-size:20px;font-weight:600;display:block;letter-spacing:-.02em;line-height:1.2}
-  .fact span{font-size:12.5px;color:var(--mute)}
+  .fact b{font-family:var(--mono);font-size:21px;font-weight:600;display:block;letter-spacing:-.02em;line-height:1.2}
+  .fact span{font-size:13.5px;color:var(--mute)}
   .fact.g b{color:var(--gold)}
-  .from{margin-top:12px;font-size:12px;color:var(--faint)}
-  .facts .snake b{font-size:18px}
+  .fact.n b{color:var(--n4)}
+  .fact.dim b{color:var(--faint)}
+  .from{margin-top:12px;font-size:13px;color:var(--faint)}
 
   /* below the card */
   section{margin-top:36px}
-  h2{font-size:14px;font-weight:600;margin:0 0 4px}
-  .sub{font-size:13px;color:var(--mute);margin:0 0 14px}
+  h2{font-size:15px;font-weight:600;margin:0 0 12px;display:flex;align-items:center}
   .barwrap{overflow-x:auto}
-  .bars{display:flex;align-items:flex-end;gap:6px;border-bottom:1px solid var(--line);min-width:100%}
-  .bar{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1 1 44px;max-width:88px;min-width:36px}
-  .bar i{width:22px;background:var(--g2);border-radius:3px 3px 0 0;min-height:3px;transition:height .4s var(--ease)}
+  .bars{display:flex;align-items:flex-end;gap:8px;border-bottom:1px solid var(--line);min-width:100%}
+  .bar{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1 1 60px;max-width:96px;min-width:36px}
+  .bar i{width:100%;max-width:44px;background:var(--g2);border-radius:4px 4px 0 0;min-height:3px;transition:height .4s var(--ease),background .3s}
   .bar.last i{background:var(--g4)}
-  .bar span{font-size:11px;color:var(--faint);margin-bottom:6px}
+  .bars[data-night] .bar i{background:var(--n2)}
+  .bars[data-night] .bar.last i{background:var(--n4)}
+  .bar span{font-size:12px;color:var(--faint);margin-bottom:6px}
 
-  details.more{margin-top:36px}
-  details.more summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;width:max-content}
+  details.more{margin-top:28px;border:1px solid var(--line);border-radius:12px;background:var(--glass);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+  details.more summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;font-size:15px;font-weight:600;padding:14px 18px;user-select:none}
   details.more summary::-webkit-details-marker{display:none}
-  details.more summary svg{width:12px;height:12px;color:var(--faint);transition:transform .18s var(--ease)}
+  details.more summary:hover{color:var(--g4)}
+  details.more summary small{font-weight:400;color:var(--faint);font-size:13.5px}
+  details.more summary svg{width:14px;height:14px;color:var(--faint);margin-left:auto;transition:transform .18s var(--ease)}
   details.more[open] summary svg{transform:rotate(180deg)}
-  details.more summary small{font-weight:400;color:var(--faint);margin-left:4px}
-  .groups{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:28px 36px;margin-top:18px}
-  .group h3{font-size:13px;font-weight:600;margin:0 0 10px;color:var(--ink)}
+  details.more[open] summary{border-bottom:1px solid var(--line)}
+  .groups{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px 36px;padding:18px 18px 20px}
+  .group h3{font-size:14px;font-weight:600;margin:0 0 10px}
   .group .r{display:flex;align-items:baseline;gap:8px;padding:4px 0}
-  .group .r b{font-family:var(--mono);font-size:15px;font-weight:600;min-width:78px}
-  .group .r span{font-size:13px;color:var(--mute)}
-  .group .note{font-size:12px;color:var(--faint);margin-top:8px}
+  .group .r b{font-family:var(--mono);font-size:15.5px;font-weight:600;min-width:80px}
+  .group .r span{font-size:14px;color:var(--mute)}
+  .group .note{font-size:12.5px;color:var(--faint);margin-top:8px}
 
   .chips{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-  .chip{display:flex;align-items:center;gap:8px;padding:7px 12px;border:1px solid var(--line);border-radius:999px;font:13px var(--mono);
-    background:var(--panel);transition:.15s var(--ease);position:relative}
+  .chip{display:flex;align-items:center;gap:8px;padding:8px 13px;border:1px solid var(--line);border-radius:999px;font:14px var(--mono);
+    background:var(--panel);transition:.15s var(--ease)}
   .chip[data-on]{border-color:var(--g3);background:#0f1a14}
   .chip:not([data-on]){color:var(--faint)}
   .chip i{width:8px;height:8px;border-radius:50%;background:var(--faint);flex-shrink:0}
   .chip[data-on] i{background:var(--g4)}
-  .chip .meta{color:var(--faint);font-size:12px}
+  .chip .meta{color:var(--faint);font-size:12.5px}
   .chip .rm{width:18px;height:18px;display:grid;place-items:center;border-radius:50%;color:var(--faint);margin:0 -4px 0 2px;opacity:.55}
   .chip .rm:hover{color:var(--ink);background:#1a2129;opacity:1}
   .chip.add{border-style:dashed;font-family:inherit;color:var(--mute)}
   .chip.add:hover{color:var(--ink);border-color:var(--faint)}
-  .addpanel{margin-top:14px;display:flex;flex-direction:column;gap:10px;max-width:560px}
-  .cmd{display:flex;align-items:center;gap:10px;background:#06080b;border:1px solid var(--line);border-radius:10px;padding:10px 12px 10px 14px;font:14px var(--mono)}
+  .addpanel{margin-top:14px;display:flex;flex-direction:column;gap:10px;max-width:580px}
+  .cmd{display:flex;align-items:center;gap:10px;background:#06080b;border:1px solid var(--line);border-radius:10px;padding:10px 12px 10px 14px;font:15px var(--mono)}
   .cmd s{color:var(--faint);text-decoration:none}
   .cmd code{flex:1}
   .cmd .ico{width:28px;height:28px}
-  .drop{border:1px dashed var(--line2);border-radius:10px;padding:12px;text-align:center;color:var(--faint);font-size:13px;cursor:pointer;transition:.15s}
+  .drop{border:1px dashed var(--line2);border-radius:10px;padding:12px;text-align:center;color:var(--faint);font-size:14px;cursor:pointer;transition:.15s}
   .drop:hover,.drop.over{border-color:var(--g3);color:var(--ink);background:#0f1519}
   .drop code{font-family:var(--mono)}
 
-  footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);font-size:12.5px;color:var(--faint);line-height:1.7}
+  footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);font-size:13.5px;color:var(--faint);line-height:1.7;text-align:center}
   footer a{color:var(--mute)}
   .toast{position:fixed;left:50%;bottom:28px;transform:translate(-50%,8px);background:#05070a;border:1px solid var(--line2);color:var(--ink);
-    padding:8px 14px;border-radius:9px;font-size:13px;opacity:0;transition:.18s var(--ease);pointer-events:none;z-index:95}
+    padding:8px 14px;border-radius:9px;font-size:14px;opacity:0;transition:.18s var(--ease);pointer-events:none;z-index:95}
   .toast[data-show]{opacity:1;transform:translate(-50%,0)}
   canvas#canvas{display:none}
 
@@ -164,12 +181,12 @@
     .cta{align-items:flex-start}
     .card{padding:16px 14px 16px;border-radius:12px}
     .picks{gap:18px}
-    .dd .t{font-size:18px}
+    .dd .t{font-size:19px}
     .facts{gap:18px 28px}
     .groups{grid-template-columns:1fr}
     .bars{gap:4px}
     .bar{min-width:24px;max-width:none}
-    .bar i{width:14px}
+    .bar i{max-width:18px}
     .bar span{font-size:10px}
   }
 </style>
@@ -179,10 +196,10 @@
   <header>
     <div><h1>prompt<b>streak</b></h1><div class="tag">A year of prompting</div></div>
     <div class="cta">
-      <button id="cta" title="Copy the command">npx promptstreak
+      <button id="cta" data-tip="Copies the command. It needs Node.js, and it reads your local Claude Code history — nothing leaves your machine.">npx promptstreak
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
       </button>
-      <small>paste in a terminal to get yours <b>·</b> needs <b>Node.js</b>, reads your local Claude Code history</small>
+      <small>Paste in a terminal to get yours</small>
     </div>
   </header>
 
@@ -193,11 +210,11 @@
         <div class="dd over" id="ddOver"></div>
       </div>
       <div class="icons" id="icons">
-        <button class="ico" id="png" title="Download as PNG" aria-label="Download as PNG"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg></button>
-        <button class="ico" id="link" title="Copy share link" aria-label="Copy share link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"></path><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"></path></svg></button>
+        <button class="ico" id="png" data-tip="Download as PNG" aria-label="Download as PNG"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg></button>
+        <button class="ico" id="link" data-tip="Copy share link" aria-label="Copy share link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"></path><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"></path></svg></button>
       </div>
     </div>
-    <div class="calwrap"><div class="cal">
+    <div class="calwrap"><div class="cal" id="cal">
       <div class="wd" id="wd"></div>
       <div><div class="months" id="months"></div><div class="cols" id="cols"></div></div>
     </div></div>
@@ -205,9 +222,8 @@
     <div class="from hidden" id="from"></div>
   </div>
 
-  <section id="bymonth" class="hidden">
-    <h2 id="trendH">Prompts by month</h2>
-    <p class="sub" id="trendSub"></p>
+  <section id="bymonth">
+    <h2><span id="trendH">Prompts by month</span><button class="q" id="trendQ" aria-label="About this chart">?</button></h2>
     <div class="barwrap"><div class="bars" id="bars"></div></div>
   </section>
 
@@ -219,14 +235,13 @@
   </details>
 
   <section id="machinesSec">
-    <h2>Machines</h2>
-    <p class="sub">Prompting on more than one computer? Run the command there, open the link it prints, and it shows up here.</p>
+    <h2>Machines<button class="q" data-tip="Prompting on more than one computer? Run the command there, open the link it prints, and that machine shows up here. Tick the ones to plot together." aria-label="About machines">?</button></h2>
     <div class="chips" id="chips"></div>
     <div class="addpanel hidden" id="addpanel">
       <div class="cmd"><s>$</s><code>npx promptstreak</code>
-        <button class="ico" id="copyCmd" title="Copy" aria-label="Copy command"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>
+        <button class="ico" id="copyCmd" data-tip="Copy" aria-label="Copy command"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>
       </div>
-      <div class="drop" id="drop">or drop a <code>history.jsonl</code> here — parsed in your browser, never uploaded</div>
+      <div class="drop" id="drop">Or drop a <code>history.jsonl</code> here — parsed in your browser, never uploaded</div>
       <input type="file" id="picker" multiple accept=".jsonl" class="hidden">
     </div>
   </section>
@@ -239,6 +254,6 @@
 <div id="tip"></div>
 <div class="toast" id="toast"></div>
 <canvas id="canvas" width="2400" height="1260"></canvas>
-<script type="module" src="./app.js?v=ee68af10bd"></script>
+<script type="module" src="./app.js?v=6f848fcf8e"></script>
 </body>
 </html>

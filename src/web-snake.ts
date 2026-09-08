@@ -2,22 +2,23 @@
  * The empty state.
  *
  * The year grid is the whole point of this page, so before there is any data
- * it plays snake on those same cells rather than sitting blank. It runs itself
- * until you press a key, then hands over.
+ * the snake plays on the real calendar cells rather than a blank box. It runs
+ * itself until you press a key, then hands over.
  */
 
 const ROWS = 7;
 const TICK_MS = 120;
 
+type Board = (HTMLElement | null)[][];
+
 interface State {
-  cells: HTMLElement[][];
+  cells: Board;
   snake: Array<[number, number]>;
   dir: [number, number];
   food: [number, number];
   cols: number;
   score: number;
   best: number;
-  playing: boolean;
   auto: boolean;
   dead: number;
 }
@@ -37,52 +38,20 @@ export function stopSnake(): void {
   state = null;
 }
 
-export function startSnake(colsEl: HTMLElement, factsEl: HTMLElement, size: number): void {
+/** `cells[col][row]` from the rendered calendar; `null` where a pad cell is. */
+export function startSnake(cells: Board, score: HTMLElement): void {
   stopSnake();
-
-  const cols = 52;
-  document.documentElement.style.setProperty("--cs", `${size}px`);
-  document.documentElement.style.setProperty("--cg", `3px`);
-  colsEl.replaceChildren();
-
-  const cells: HTMLElement[][] = [];
-  for (let c = 0; c < cols; c++) {
-    const col = document.createElement("div");
-    col.className = "col";
-    const column: HTMLElement[] = [];
-    for (let r = 0; r < ROWS; r++) {
-      const cell = document.createElement("i");
-      cell.className = "cell";
-      cell.style.animationDelay = `${c * 5}ms`;
-      col.append(cell);
-      column.push(cell);
-    }
-    cells.push(column);
-    colsEl.append(col);
-  }
-
+  const cols = cells.length;
+  const mid = Math.floor(cols / 2);
   state = {
-    cells,
-    cols,
-    snake: [[Math.floor(cols / 2), 3], [Math.floor(cols / 2) - 1, 3], [Math.floor(cols / 2) - 2, 3]],
-    dir: [1, 0],
-    food: [0, 0],
-    score: 0,
+    cells, cols,
+    snake: [[mid, 3], [mid - 1, 3], [mid - 2, 3]],
+    dir: [1, 0], food: [0, 0], score: 0,
     best: Number(localStorage.getItem("promptstreak:snake") ?? 0) || 0,
-    playing: true,
-    auto: true,
-    dead: 0,
+    auto: true, dead: 0,
   };
+  scoreEl = score;
   placeFood();
-
-  factsEl.replaceChildren();
-  const wrap = document.createElement("div");
-  wrap.className = "fact snake";
-  scoreEl = document.createElement("b");
-  const hint = document.createElement("span");
-  hint.textContent = "Nothing here yet — run npx promptstreak to see your year. Arrow keys or WASD to play meanwhile.";
-  wrap.append(scoreEl, hint);
-  factsEl.append(wrap);
   paintScore();
 
   onKey = (e: KeyboardEvent) => {
@@ -100,81 +69,80 @@ export function startSnake(colsEl: HTMLElement, factsEl: HTMLElement, size: numb
   timer = setInterval(tick, TICK_MS) as unknown as number;
 }
 
+const open = (s: State, c: number, r: number) =>
+  c >= 0 && r >= 0 && c < s.cols && r < ROWS && !!s.cells[c]?.[r];
+
 function placeFood(): void {
-  if (!state) return;
+  const s = state;
+  if (!s) return;
   const free: Array<[number, number]> = [];
-  for (let c = 0; c < state.cols; c++)
+  for (let c = 0; c < s.cols; c++)
     for (let r = 0; r < ROWS; r++)
-      if (!state.snake.some((s) => eq(s, [c, r]))) free.push([c, r]);
-  state.food = free[Math.floor(Math.random() * free.length)] ?? [0, 0];
+      if (open(s, c, r) && !s.snake.some((x) => eq(x, [c, r]))) free.push([c, r]);
+  s.food = free[Math.floor(Math.random() * free.length)] ?? [0, 0];
 }
 
 /** Greedy chase that refuses moves with no room to escape. */
 function autoSteer(): void {
-  if (!state) return;
-  const [hx, hy] = state.snake[0];
+  const s = state;
+  if (!s) return;
+  const [hx, hy] = s.snake[0];
   const options: Array<[number, number]> = [[1, 0], [-1, 0], [0, 1], [0, -1]];
   const safe = options.filter(([dx, dy]) => {
-    if (dx === -state!.dir[0] && dy === -state!.dir[1]) return false;
+    if (dx === -s.dir[0] && dy === -s.dir[1]) return false;
     const nx = hx + dx, ny = hy + dy;
-    if (nx < 0 || ny < 0 || nx >= state!.cols || ny >= ROWS) return false;
-    return !state!.snake.slice(0, -1).some((s) => eq(s, [nx, ny]));
+    return open(s, nx, ny) && !s.snake.slice(0, -1).some((x) => eq(x, [nx, ny]));
   });
   if (!safe.length) return;
-  const [fx, fy] = state.food;
-  safe.sort((a, b) => {
-    const da = Math.abs(hx + a[0] - fx) + Math.abs(hy + a[1] - fy);
-    const db = Math.abs(hx + b[0] - fx) + Math.abs(hy + b[1] - fy);
-    return da - db;
-  });
-  state.dir = safe[0];
+  const [fx, fy] = s.food;
+  safe.sort((a, b) =>
+    Math.abs(hx + a[0] - fx) + Math.abs(hy + a[1] - fy) - (Math.abs(hx + b[0] - fx) + Math.abs(hy + b[1] - fy)));
+  s.dir = safe[0];
 }
 
 function paintScore(): void {
   if (!state || !scoreEl) return;
-  scoreEl.textContent = state.best
-    ? `${state.score} · best ${state.best}`
-    : String(state.score);
+  scoreEl.textContent = state.best ? `${state.score} · best ${state.best}` : String(state.score);
 }
 
 function tick(): void {
-  if (!state) return;
-  if (state.dead > 0) {
-    state.dead--;
-    if (state.dead === 0) {
-      state.snake = [[Math.floor(state.cols / 2), 3], [Math.floor(state.cols / 2) - 1, 3]];
-      state.dir = [1, 0];
-      state.score = 0;
-      state.auto = true;
+  const s = state;
+  if (!s) return;
+  if (s.dead > 0) {
+    s.dead--;
+    if (s.dead === 0) {
+      const mid = Math.floor(s.cols / 2);
+      s.snake = [[mid, 3], [mid - 1, 3]];
+      s.dir = [1, 0];
+      s.score = 0;
+      s.auto = true;
       placeFood();
       paintScore();
     }
     return;
   }
-  if (state.auto) autoSteer();
+  if (s.auto) autoSteer();
 
-  const [hx, hy] = state.snake[0];
-  const head: [number, number] = [hx + state.dir[0], hy + state.dir[1]];
-  const hitWall = head[0] < 0 || head[1] < 0 || head[0] >= state.cols || head[1] >= ROWS;
-  if (hitWall || state.snake.some((s) => eq(s, head))) {
-    state.best = Math.max(state.best, state.score);
+  const [hx, hy] = s.snake[0];
+  const head: [number, number] = [hx + s.dir[0], hy + s.dir[1]];
+  if (!open(s, head[0], head[1]) || s.snake.some((x) => eq(x, head))) {
+    s.best = Math.max(s.best, s.score);
     try {
-      localStorage.setItem("promptstreak:snake", String(state.best));
+      localStorage.setItem("promptstreak:snake", String(s.best));
     } catch {
       // Storage is optional; the game does not need it.
     }
-    state.dead = 8;
+    s.dead = 8;
     paintScore();
     return;
   }
 
-  state.snake.unshift(head);
-  if (eq(head, state.food)) {
-    state.score++;
+  s.snake.unshift(head);
+  if (eq(head, s.food)) {
+    s.score++;
     paintScore();
     placeFood();
-  } else state.snake.pop();
-
+  } else s.snake.pop();
   paint();
 }
 
@@ -183,15 +151,15 @@ function paint(): void {
   if (!s) return;
   for (let c = 0; c < s.cols; c++)
     for (let r = 0; r < ROWS; r++) {
-      const cell = s.cells[c][r];
-      delete cell.dataset.l;
-      delete cell.dataset.gold;
+      const cell = s.cells[c]?.[r];
+      if (!cell) continue;
+      cell.dataset.l = "0";
+      delete cell.dataset.ov;
     }
   s.snake.forEach(([c, r], i) => {
     const cell = s.cells[c]?.[r];
     if (cell) cell.dataset.l = String(i === 0 ? 4 : Math.max(1, 3 - Math.floor(i / 6)));
   });
-  const [fc, fr] = s.food;
-  const food = s.cells[fc]?.[fr];
-  if (food) food.dataset.gold = "2";
+  const food = s.cells[s.food[0]]?.[s.food[1]];
+  if (food) food.dataset.ov = "2";
 }
