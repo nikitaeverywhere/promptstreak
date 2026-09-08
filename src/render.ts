@@ -14,7 +14,7 @@ export const METRIC_LABELS: Record<MetricKey, string> = {
   prompts: "Prompts",
   godPrompts: "God prompts (>=5000 chars)",
   leash: "Leash length (min between prompts)",
-  medianLength: "Median prompt length (chars)",
+  promptWords: "Median prompt length (words)",
   nudges: "Nudges (<=25 chars)",
   specShaped: "Spec-shaped prompts",
   autonomy: "Autonomy (hours agent worked alone)",

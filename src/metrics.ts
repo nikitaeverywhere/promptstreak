@@ -1,4 +1,4 @@
-import type { Archetype, MetricKey, Metrics, PromptEvent, Stats } from "./types.js";
+import type { Archetype, MetricKey, Metrics, PromptEvent, Stats, TokenStats } from "./types.js";
 
 /** A prompt this long is a spec, not a message. Fixed so any two people compare. */
 export const GOD_PROMPT_CHARS = 5000;
@@ -8,6 +8,13 @@ export const NUDGE_CHARS = 25;
 export const AUTONOMY_GAP_MIN = 15;
 /** Beyond this, you left — it is not one working session any more. */
 export const SESSION_BREAK_H = 6;
+/**
+ * A stretch longer than this is a session left open overnight, not work.
+ * Without the cap the top results are 142h and 43h, which are plainly idle.
+ */
+export const UNATTENDED_CAP_H = 24;
+
+const words = (text: string) => text.trim().split(/\s+/).filter(Boolean).length;
 
 const SPEC_SHAPED = /(^|\n)\s*([-*]|\d+[.)])\s+/;
 const PLEASE = /\bplease\b/i;
@@ -44,9 +51,12 @@ interface Gap {
 function sessionGaps(events: PromptEvent[]): Gap[] {
   const out: Gap[] = [];
   const limit = SESSION_BREAK_H * 3600_000;
-  for (let i = 1; i < events.length; i++) {
-    const prev = events[i - 1];
-    const cur = events[i];
+  // Slash commands are not prompts. Counting them makes every `/model` look
+  // like frantic steering and drags the median toward zero.
+  const typed = events.filter((e) => !e.isSlash);
+  for (let i = 1; i < typed.length; i++) {
+    const prev = typed[i - 1];
+    const cur = typed[i];
     if (cur.project !== prev.project) continue;
     const ms = cur.ts - prev.ts;
     if (ms <= 0 || ms >= limit) continue;
@@ -65,7 +75,18 @@ export function archetypeOf(medianLeashMin: number): Archetype {
   return "Orchestrator";
 }
 
-export function computeMetrics(events: PromptEvent[]): Metrics {
+export interface ComputeOptions {
+  machines?: string[];
+  tokens?: TokenStats;
+  /**
+   * Longest run measured from transcripts, where agent activity proves the
+   * agent was working. Prompt gaps alone cannot tell that apart from you
+   * sleeping, so this wins whenever transcripts are available.
+   */
+  provenRun?: { hours: number; day: string };
+}
+
+export function computeMetrics(events: PromptEvent[], opts: ComputeOptions = {}): Metrics {
   if (!events.length) throw new Error("No prompts found.");
 
   const sorted = [...events].sort((a, b) => a.ts - b.ts);
@@ -80,7 +101,7 @@ export function computeMetrics(events: PromptEvent[]): Metrics {
     prompts: zeros(),
     godPrompts: zeros(),
     leash: zeros(),
-    medianLength: zeros(),
+    promptWords: zeros(),
     nudges: zeros(),
     specShaped: zeros(),
     autonomy: zeros(),
@@ -92,9 +113,10 @@ export function computeMetrics(events: PromptEvent[]): Metrics {
   const byHour = new Array(24).fill(0);
   const byProject = new Map<string, number>();
   const lengthsByDay = new Map<string, number[]>();
+  const wordsByDay = new Map<string, number[]>();
   const timesByDay = new Map<string, number[]>();
   const nudgeCounts = new Map<string, number>();
-  let words = 0;
+  let totalWords = 0;
   let chars = 0;
   let please = 0;
   let thanks = 0;
@@ -118,9 +140,11 @@ export function computeMetrics(events: PromptEvent[]): Metrics {
 
     const text = e.text;
     const trimmed = text.trim();
+    const w = words(text);
     chars += text.length;
-    words += trimmed.split(/\s+/).filter(Boolean).length;
+    totalWords += w;
     (lengthsByDay.get(day) ?? lengthsByDay.set(day, []).get(day)!).push(text.length);
+    (wordsByDay.get(day) ?? wordsByDay.set(day, []).get(day)!).push(w);
 
     if (text.length >= GOD_PROMPT_CHARS) series.godPrompts[i]++;
     if (trimmed.length <= NUDGE_CHARS) {
@@ -141,9 +165,9 @@ export function computeMetrics(events: PromptEvent[]): Metrics {
     }
   }
 
-  for (const [day, lengths] of lengthsByDay) {
+  for (const [day, w] of wordsByDay) {
     const i = index.get(day);
-    if (i !== undefined) series.medianLength[i] = Math.round(median(lengths));
+    if (i !== undefined) series.promptWords[i] = Math.round(median(w));
   }
 
   // Leash and autonomy both come from the same session gaps.
@@ -156,6 +180,22 @@ export function computeMetrics(events: PromptEvent[]): Metrics {
     series.leash[i] = Math.round(median(mins) * 10) / 10;
     const idle = mins.filter((m) => m >= AUTONOMY_GAP_MIN).reduce((a, b) => a + b, 0);
     series.autonomy[i] = Math.round((idle / 60) * 10) / 10;
+  }
+
+  // The session cap above truncates long runs at 6h, so the longest unattended
+  // stretch is measured on its own, capped only against left-open sessions.
+  let longestUnattendedH = 0;
+  let longestUnattendedAt = "";
+  const typedOnly = sorted.filter((e) => !e.isSlash);
+  for (let i = 1; i < typedOnly.length; i++) {
+    const prev = typedOnly[i - 1];
+    const cur = typedOnly[i];
+    if (cur.project !== prev.project) continue;
+    const h = (cur.ts - prev.ts) / 3600_000;
+    if (h > longestUnattendedH && h <= UNATTENDED_CAP_H) {
+      longestUnattendedH = h;
+      longestUnattendedAt = dayOf(prev.ts);
+    }
   }
 
   // Overnight delivery: you handed work over late and came back the next day.
@@ -196,10 +236,12 @@ export function computeMetrics(events: PromptEvent[]): Metrics {
     slashCommands: sorted.length - typed.length,
     activeDays: activeDaySet.size,
     spanDays: days.length,
-    words,
+    words: totalWords,
     chars,
     medianLength: Math.round(median(typed.map((e) => e.text.length))),
+    medianWords: Math.round(median(typed.map((e) => words(e.text)))),
     maxLength,
+    maxWords: Math.max(0, ...typed.map((e) => words(e.text))),
     maxLengthDay,
     godPrompts: series.godPrompts.reduce((a, b) => a + b, 0),
     godPromptDays: series.godPrompts.filter((n) => n > 0).length,
@@ -210,6 +252,8 @@ export function computeMetrics(events: PromptEvent[]): Metrics {
     archetype: archetypeOf(medianLeashMin),
     leashByMonth,
     autonomyHours: Math.round(series.autonomy.reduce((a, b) => a + b, 0)),
+    longestUnattendedH: opts.provenRun?.hours ?? Math.round(longestUnattendedH * 10) / 10,
+    longestUnattendedAt: opts.provenRun?.day ?? longestUnattendedAt,
     overnightHandoffs,
     overnightHours: Math.round(overnightHours),
     longestStreak: longest,
@@ -223,6 +267,8 @@ export function computeMetrics(events: PromptEvent[]): Metrics {
     thanks,
     sorry,
     topNudges: [...nudgeCounts].sort((a, b) => b[1] - a[1]).slice(0, 10),
+    machines: opts.machines ?? [],
+    ...(opts.tokens ? { tokens: opts.tokens } : {}),
   };
 
   return { from, to, days, series, stats };

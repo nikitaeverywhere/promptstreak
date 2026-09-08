@@ -16,7 +16,7 @@ export type MetricKey =
   | "prompts"
   | "godPrompts"
   | "leash"
-  | "medianLength"
+  | "promptWords"
   | "nudges"
   | "specShaped"
   | "autonomy"
@@ -37,6 +37,20 @@ export interface Metrics {
   stats: Stats;
 }
 
+/** Real usage from transcripts — never estimated. Recent window only. */
+export interface TokenStats {
+  input: number;
+  output: number;
+  cacheRead: number;
+  cacheWrite: number;
+  total: number;
+  /** Transcripts are pruned, so this never spans the full grid. */
+  fromDay: string;
+  toDay: string;
+  toolCalls: number;
+  subagents: number;
+}
+
 export interface Stats {
   totalPrompts: number;
   typedPrompts: number;
@@ -46,7 +60,9 @@ export interface Stats {
   words: number;
   chars: number;
   medianLength: number;
+  medianWords: number;
   maxLength: number;
+  maxWords: number;
   maxLengthDay: string;
   godPrompts: number;
   godPromptDays: number;
@@ -58,6 +74,9 @@ export interface Stats {
   /** `YYYY-MM` -> median leash in minutes. */
   leashByMonth: Record<string, number>;
   autonomyHours: number;
+  /** Longest stretch you did not prompt while one session stayed alive. */
+  longestUnattendedH: number;
+  longestUnattendedAt: string;
   overnightHandoffs: number;
   overnightHours: number;
   longestStreak: number;
@@ -74,4 +93,7 @@ export interface Stats {
   sorry: number;
   /** Most repeated short prompts, biggest first. */
   topNudges: Array<[string, number]>;
+  /** Hostnames whose history is folded into this view. */
+  machines: string[];
+  tokens?: TokenStats;
 }

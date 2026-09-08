@@ -69,9 +69,9 @@ merged rather than the first one winning.
 
 ## Privacy
 
-Your prompt text never leaves your machine. The share link carries only per-day counts and the
-headline numbers, and it rides in the URL **fragment** — the part browsers never send to a
-server. The page itself is static: no analytics, no backend, no upload endpoint.
+Everything runs in the browser only. The share link carries view data only, never the source —
+per-day counts and headline numbers, in the URL **fragment**, which browsers never send to a
+server. The page is static: no analytics, no backend, no upload endpoint.
 
 ## Development
 
@@ -88,4 +88,4 @@ day must not split at midnight UTC.
 
 ## Licence
 
-MIT. Unofficial, and not affiliated with Anthropic. Claude is a trademark of Anthropic, PBC.
+MIT.

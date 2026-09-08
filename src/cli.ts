@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 import { spawn } from "node:child_process";
+import { hostname } from "node:os";
 import { historyFiles, projectRoots } from "./paths.js";
-import { findJsonl, merge, parseHistory, parsePath, parseTranscript } from "./parse.js";
+import { findJsonl, merge, parseHistory, parsePath } from "./parse.js";
+import { scanTranscripts } from "./transcripts.js";
 import { computeMetrics } from "./metrics.js";
 import { encode } from "./codec.js";
 import { METRIC_LABELS, renderGrid, renderLegend, renderStats } from "./render.js";
@@ -63,8 +65,16 @@ async function main(): Promise<void> {
   const sources: PromptEvent[][] = [];
   const history = historyFiles();
   for (const f of history) sources.push(parseHistory(f));
+
+  // Transcripts carry the two things history cannot: real token usage, and
+  // agent activity that proves a long gap was work rather than you sleeping.
+  let scan: ReturnType<typeof scanTranscripts> | null = null;
   if (!flag("--local")) {
-    for (const root of projectRoots()) for (const f of findJsonl(root)) sources.push(parseTranscript(f));
+    const files = projectRoots().flatMap(findJsonl);
+    if (files.length) {
+      scan = scanTranscripts(files);
+      sources.push(scan.events);
+    }
   }
   for (const p of extra) {
     const events = parsePath(p);
@@ -83,7 +93,10 @@ async function main(): Promise<void> {
     return;
   }
 
-  const metrics = computeMetrics(events);
+  const metrics = computeMetrics(events, {
+    machines: [hostname()],
+    ...(scan ? { tokens: scan.tokens, provenRun: { hours: scan.longestRunH, day: scan.longestRunDay } } : {}),
+  });
 
   if (flag("--json")) {
     console.log(JSON.stringify(metrics, null, 2));
@@ -94,7 +107,7 @@ async function main(): Promise<void> {
   console.log(renderGrid(metrics, metric));
   console.log(`\n${renderLegend(metric)}\n`);
 
-  const url = `${WEB_URL}/#${await encode(metrics)}`;
+  const url = `${WEB_URL}/#${await encode(metrics, hostname())}`;
   if (flag("--print-url")) {
     console.log(url);
     return;

@@ -40,11 +40,32 @@ test("god prompts use the fixed 5000-char threshold", () => {
   assert.deepEqual(m.series.godPrompts, [1, 0, 0, 0]);
 });
 
-test("leash is the median in-session gap, and sets the archetype", () => {
-  // Gaps inside one session: 2, 3 and 55 minutes. The 9h overnight gap breaks
-  // the session, so it is not a leash measurement.
-  assert.equal(s.medianLeashMin, 3);
-  assert.equal(s.archetype, "Collaborator");
+test("leash ignores slash commands and breaks at 6h", () => {
+  // Typed prompts only: 10:00 -> 10:05 -> 11:00, so gaps of 5 and 55 minutes.
+  // `/model` at 10:02 is not a prompt, and the 9h overnight gap is not a leash.
+  assert.equal(s.medianLeashMin, 30);
+  assert.equal(s.archetype, "Orchestrator");
+});
+
+test("the same prompt logged twice is one prompt", () => {
+  // history.jsonl stores submit time in ms; the transcript stores ISO seconds.
+  // A sub-second difference must not become two prompts a moment apart.
+  const twice = merge(
+    [{ ts: 1_700_000_000_000, text: "ship it", project: "/p", isSlash: false, pasted: false }],
+    [{ ts: 1_700_000_000_400, text: "ship it", project: "/p", isSlash: false, pasted: false }],
+  );
+  assert.equal(twice.length, 1);
+  // The same words typed again much later are genuinely two prompts.
+  const later = merge(
+    [{ ts: 1_700_000_000_000, text: "ship it", project: "/p", isSlash: false, pasted: false }],
+    [{ ts: 1_700_000_300_000, text: "ship it", project: "/p", isSlash: false, pasted: false }],
+  );
+  assert.equal(later.length, 2);
+});
+
+test("longest unattended run is not truncated by the session break", () => {
+  assert.equal(s.longestUnattendedH, 9);
+  assert.equal(s.longestUnattendedAt, "2026-01-03");
 });
 
 test("archetype thresholds", () => {
@@ -75,10 +96,13 @@ test("nudges, spec shape, night owl and politeness", () => {
   assert.equal(s.sorry, 0);
 });
 
-test("text stats", () => {
+test("text stats, in words as well as characters", () => {
   assert.equal(s.medianLength, 7);
+  assert.equal(s.medianWords, 1);
+  assert.equal(s.maxWords, 4);
   assert.equal(s.words, 10);
   assert.equal(s.chars, 5032);
+  assert.deepEqual(m.series.promptWords, [1, 0, 3, 1]);
 });
 
 test("streaks", () => {

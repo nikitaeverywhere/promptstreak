@@ -104,20 +104,30 @@ export function parseUnknownText(raw: string): PromptEvent[] {
 }
 
 /**
+ * The same prompt is logged twice: once in `history.jsonl` with millisecond
+ * submit time, once in the session transcript with second-precision ISO time.
+ * An exact key would treat a 0.2s difference as two prompts 0.2s apart, which
+ * both inflates the count and poisons any gap-based metric.
+ */
+const SAME_PROMPT_MS = 120_000;
+
+/**
  * Merge event lists, dropping duplicates and sorting chronologically.
- * `history.jsonl` legitimately repeats lines — `/mcp` writes three per call —
+ * `history.jsonl` also repeats lines outright — `/mcp` writes three per call —
  * and resumed sessions replay records, so dedupe is not optional.
  */
 export function merge(...lists: PromptEvent[][]): PromptEvent[] {
-  const seen = new Set<string>();
+  const all = lists.flat().sort((a, b) => a.ts - b.ts);
+  const seen = new Map<string, number[]>();
   const out: PromptEvent[] = [];
-  for (const list of lists) {
-    for (const e of list) {
-      const k = `${e.ts}|${e.text}`;
-      if (seen.has(k)) continue;
-      seen.add(k);
-      out.push(e);
-    }
+  for (const e of all) {
+    const k = e.text.trim();
+    let times = seen.get(k);
+    if (!times) seen.set(k, (times = []));
+    // Times are ascending, so only the last one can be inside the window.
+    if (times.length && e.ts - times[times.length - 1] <= SAME_PROMPT_MS) continue;
+    times.push(e.ts);
+    out.push(e);
   }
-  return out.sort((a, b) => a.ts - b.ts);
+  return out;
 }
