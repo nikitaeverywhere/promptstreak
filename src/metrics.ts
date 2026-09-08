@@ -292,5 +292,7 @@ function streaks(days: string[], active: Set<string>, to: string) {
   }
   let current = 0;
   for (let i = days.length - 1; i >= 0 && active.has(days[i]); i--) current++;
-  return { longest, longestEnd, current: active.has(to) ? current : 0 };
+  const today = dayOf(Date.now());
+  const yesterday = dayOf(Date.now() - 86_400_000);
+  return { longest, longestEnd, current: to === today || to === yesterday ? current : 0 };
 }

@@ -103,7 +103,7 @@ export function renderStats(m: Metrics): string {
   return [
     `${C.bold}${n(s.totalPrompts)} prompts${C.reset} ${C.dim}·${C.reset} ${s.activeDays} active days of ${s.spanDays} ${C.dim}(${m.from} → ${m.to})${C.reset}`,
     ``,
-    `  ${C.bold}${s.archetype}${C.reset} ${C.dim}— median ${s.medianLeashMin} min between prompts${C.reset}${arrow ? `, ${arrow}` : ""}`,
+    `  ${C.bold}${s.medianLeashMin.toFixed(1)} min${C.reset} ${C.dim}median between prompts${C.reset}${arrow ? `${C.dim}, ${arrow}${C.reset}` : ""}`,
     `  ${C.gold}■${C.reset} ${n(s.godPrompts)} god prompts across ${s.godPromptDays} days ${C.dim}· longest ${n(s.maxLength)} chars on ${s.maxLengthDay}${C.reset}`,
     `  ${n(s.words)} words written ${C.dim}· median prompt ${s.medianLength} chars · ${pct(s.nudgeRatio)} are nudges${C.reset}`,
     `  ${n(s.autonomyHours)} h of unattended agent time ${C.dim}· ${s.overnightHandoffs} overnight deliveries${C.reset}`,
