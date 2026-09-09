@@ -515,7 +515,7 @@ function drawCard(): HTMLCanvasElement {
   ctx.scale(2, 2);
   ctx.fillStyle = CSS("--bg");
   ctx.fillRect(0, 0, W, H);
-  const sans = `-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif`;
+  const sans = `system-ui,-apple-system,"Segoe UI",sans-serif`;
   const mono = CSS("--mono");
   const def = byKey(main);
   const night = isNight(main);
@@ -546,10 +546,11 @@ function drawCard(): HTMLCanvasElement {
   ctx.textAlign = "right";
   ctx.fillStyle = CSS("--ink");
   ctx.font = `500 19px ${mono}`;
-  ctx.fillText("npx promptstreak", W - 60, 72);
-  ctx.fillStyle = CSS("--faint");
-  ctx.font = `400 14px ${mono}`;
-  ctx.fillText("to get yours", W - 60, 96);
+  ctx.fillText("npx promptstreak", W - 60, 74);
+  // Mirrors the left subtitle exactly: face, size, colour and baseline.
+  ctx.fillStyle = CSS("--mute");
+  ctx.font = `400 17px ${sans}`;
+  ctx.fillText("to get yours", W - 60, 102);
   ctx.textAlign = "left";
 
   const values = m.series[main];
