@@ -9,7 +9,8 @@
     "promptstreak": "lib/cli.js"
   },
   "files": [
-    "lib/**/*"
+    "lib/**/*",
+    "!lib/web*"
   ],
   "engines": {
     "node": ">=18"
