@@ -8,6 +8,14 @@
 <meta property="og:title" content="promptstreak">
 <meta property="og:description" content="A year of prompting, as a contribution graph.">
 <meta property="og:type" content="website">
+<!-- Google tag (gtag.js) — counts visits; the share data in the URL fragment is never sent -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-81PFBNNRJ1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-81PFBNNRJ1', { page_location: location.origin + location.pathname });
+</script>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='3' fill='%230b0d10'/><rect x='3' y='6' width='3' height='3' rx='1' fill='%2340c463'/><rect x='7' y='3' width='3' height='3' rx='1' fill='%23ffd34d'/><rect x='7' y='10' width='3' height='3' rx='1' fill='%2330a14e'/><rect x='11' y='6' width='3' height='3' rx='1' fill='%23216e39'/></svg>">
 <style>
   :root{
@@ -81,8 +89,8 @@
   /* calendar */
   .calwrap{overflow-x:auto;overflow-y:hidden;padding:2px 0 4px}
   .cal{display:flex;gap:6px;width:max-content;margin:0 auto}
-  .wd{display:grid;grid-template-rows:repeat(7,var(--cs));gap:var(--cg);padding:20px 0 0 4px;font-size:10px;color:var(--faint);text-align:left;width:16px;
-    position:sticky;right:0;background:var(--panel);z-index:2}
+  .wd{display:grid;grid-template-rows:repeat(7,var(--cs));gap:var(--cg);padding:20px 0 0 6px;font-size:10px;color:var(--faint);text-align:left;width:20px;
+    position:sticky;right:0;z-index:2;background:linear-gradient(to bottom,transparent 20px,var(--panel) 20px)}
   .wd span{line-height:var(--cs)}
   .months{display:flex;gap:var(--cg);height:20px;font-size:12px;color:var(--mute)}
   .months span{width:var(--cs);white-space:nowrap}
@@ -249,7 +257,7 @@
   </section>
 
   <footer>
-    Everything runs in the browser only. The share link carries view data only, never the source.<br>
+    Everything runs in the browser only. The share link carries view data only, never the source — and it is not sent to analytics.<br>
     <a href="/" id="domain">promptstreak</a> · <a href="https://github.com/nikitaeverywhere/promptstreak">Source</a> · built with 💚 by <a href="https://nikitaeverywhere.com">Nikita Savchenko</a>
   </footer>
 </div>

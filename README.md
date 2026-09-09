@@ -83,8 +83,10 @@ Nothing you typed ever leaves your machine — not from the CLI, not from the pa
 - **The link it opens** carries view data only, never the source — per-day counts and headline
   numbers, compressed into the URL **fragment**, which browsers never send to a server. Prompt
   text, file paths and project names are not in it.
-- **The page** is static: no analytics, no backend, no upload endpoint. Dropped files are parsed
-  in the browser and stay there. Saved machines live in your browser's local storage.
+- **The page** is static: no backend, no upload endpoint. Dropped files are parsed in the
+  browser and stay there. Saved machines live in your browser's local storage. Google Analytics
+  counts visits; it is configured to receive the page address without the fragment, so the share
+  data never reaches it.
 
 Read the parser if you want to check: `src/parse-core.ts` is the whole of what is extracted.
 
