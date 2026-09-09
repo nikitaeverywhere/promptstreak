@@ -1,6 +1,8 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "promptstreak",
+  // The personal account, where the nikitaeverywhere.com zone lives.
+  "account_id": "3c67f3b336dd59915b5cd8a9bf035839",
   "compatibility_date": "2026-09-01",
   // A custom domain on a zone already in the account: Cloudflare creates the
   // DNS record and certificate on deploy. workers.dev cannot go shorter than
