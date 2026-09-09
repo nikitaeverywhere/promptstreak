@@ -8,6 +8,13 @@ import { startSnake, stopSnake } from "./web-snake.js";
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const n = (v: number) => Math.round(v).toLocaleString("en-US");
+/** Headline numbers: 8,269 stays exact, 511,664 becomes 512K. Full precision lives in "More numbers". */
+const short = (v: number) => {
+  const a = Math.abs(v);
+  if (a < 10_000) return n(v);
+  const f = (x: number, u: string) => `${x < 100 ? x.toFixed(1).replace(/\.0$/, "") : Math.round(x)}${u}`;
+  return a < 1e6 ? f(v / 1e3, "K") : a < 1e9 ? f(v / 1e6, "M") : f(v / 1e9, "B");
+};
 const el = (tag: string, cls?: string, text?: string) => {
   const e = document.createElement(tag);
   if (cls) e.className = cls;
@@ -309,16 +316,16 @@ function renderPickers(): void {
 /** The fifth slot follows the primary metric; the other four never move. */
 function spotlight(s: Stats): [string, string] {
   switch (main) {
-    case "godPrompts": return [`${n(s.maxWords)} words`, "your longest prompt"];
+    case "godPrompts": return [`${short(s.maxWords)} words`, "your longest prompt"];
     case "leash": return [`${s.medianLeashMin.toFixed(1)} min`, "median between prompts"];
-    case "autonomy": return [`${n(s.autonomyHours)} h`, "unattended in total"];
+    case "autonomy": return [`${short(s.autonomyHours)} h`, "unattended in total"];
     case "promptWords": return [`${s.medianWords} words`, "median prompt"];
     case "nudges": return [`${(s.nudgeRatio * 100).toFixed(1)}%`, "were nudges"];
-    case "specShaped": return [n(s.specShaped), "spec-shaped prompts"];
-    case "overnight": return [n(s.overnightHandoffs), "overnight handoffs"];
-    case "nightOwl": return [n(s.afterMidnight), "prompts after midnight"];
-    case "politeness": return [n(s.please), "times you said please"];
-    default: return [n(s.words), "words written"];
+    case "specShaped": return [short(s.specShaped), "spec-shaped prompts"];
+    case "overnight": return [short(s.overnightHandoffs), "overnight handoffs"];
+    case "nightOwl": return [short(s.afterMidnight), "prompts after midnight"];
+    case "politeness": return [short(s.please), "times you said please"];
+    default: return [short(s.words), "words written"];
   }
 }
 
@@ -327,9 +334,9 @@ function factRows(s: Stats | null): Fact[] {
   if (!s) return [["—", "prompts", "dim"], ["—", "longest streak", "dim"], ["—", "God prompts", "dim"], ["—", "longest unattended run", "dim"], ["—", "words written", "dim"]];
   const [sv, sl] = spotlight(s);
   const rows: Fact[] = [
-    [`${n(s.totalPrompts)} prompts`, `${s.activeDays} of ${s.spanDays} days`],
+    [`${short(s.totalPrompts)} prompts`, `${s.activeDays} of ${s.spanDays} days`],
     [`${s.longestStreak} days`, "longest streak"],
-    [n(s.godPrompts), "God prompts", "g"],
+    [short(s.godPrompts), "God prompts", "g"],
     [`${s.longestUnattendedH} h`, "longest unattended run"],
     [sv, sl, isNight(main) ? "n" : undefined],
   ];
