@@ -20,13 +20,12 @@ The grid switches between ten metrics. Four of them are the interesting ones:
 | Metric | What it says about you |
 |---|---|
 | **God prompts** | Prompts of 5,000+ characters — a spec, not a message. These get gold cells. |
-| **Leash** | Median minutes between your prompts. Under 3 you are a **Babysitter**, 3–15 a **Collaborator**, 15+ an **Orchestrator**. |
+| **Leash** | Median minutes between your prompts — short is steering, long is delegating. Watch it by month: if it is rising, you are handing over more. |
 | **Autonomy** | Hours the agent worked while you were away. |
 | **Nudges** | How much of your year was `yes`, `continue`, `try again`. |
 
 Plus prompt length, spec-shaped prompts, overnight handoffs, night-owl hours, politeness, and the
-plain prompt count. Your leash by month is the one worth watching — if it is rising, you are
-learning to delegate.
+plain prompt count.
 
 ## Usage
 
@@ -69,9 +68,18 @@ merged rather than the first one winning.
 
 ## Privacy
 
-Everything runs in the browser only. The share link carries view data only, never the source —
-per-day counts and headline numbers, in the URL **fragment**, which browsers never send to a
-server. The page is static: no analytics, no backend, no upload endpoint.
+Nothing you typed ever leaves your machine — not from the CLI, not from the page.
+
+- **`npx promptstreak`** reads `~/.claude/history.jsonl` and the session transcripts on disk,
+  counts them locally, and prints the result. Its only network action is opening a browser tab;
+  it sends no telemetry and calls no API.
+- **The link it opens** carries view data only, never the source — per-day counts and headline
+  numbers, compressed into the URL **fragment**, which browsers never send to a server. Prompt
+  text, file paths and project names are not in it.
+- **The page** is static: no analytics, no backend, no upload endpoint. Dropped files are parsed
+  in the browser and stay there. Saved machines live in your browser's local storage.
+
+Read the parser if you want to check: `src/parse-core.ts` is the whole of what is extracted.
 
 ## Development
 
@@ -88,4 +96,4 @@ day must not split at midnight UTC.
 
 ## Licence
 
-MIT.
+[MIT](./LICENSE) © [Nikita Savchenko](https://nikitaeverywhere.com)
