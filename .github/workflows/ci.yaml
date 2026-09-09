@@ -13,14 +13,14 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@{"message":"Not Found","documentation_url":"https://docs.github.com/rest/git/tags#get-a-tag","status":"404"} # v4
-      - uses: actions/setup-node@{"message":"Not Found","documentation_url":"https://docs.github.com/rest/git/tags#get-a-tag","status":"404"} # v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '22'
       - run: npm ci
       - run: npm run build
       - run: npm test
-      - uses: actions/upload-artifact@{"message":"Not Found","documentation_url":"https://docs.github.com/rest/git/tags#get-a-tag","status":"404"} # v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: web
           path: web
@@ -37,12 +37,12 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     steps:
-      - uses: actions/checkout@{"message":"Not Found","documentation_url":"https://docs.github.com/rest/git/tags#get-a-tag","status":"404"} # v4
-      - uses: actions/download-artifact@{"message":"Not Found","documentation_url":"https://docs.github.com/rest/git/tags#get-a-tag","status":"404"} # v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: web
           path: web
-      - uses: cloudflare/wrangler-action@{"message":"Not Found","documentation_url":"https://docs.github.com/rest/git/tags#get-a-tag","status":"404"} # v3
+      - uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd # v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
