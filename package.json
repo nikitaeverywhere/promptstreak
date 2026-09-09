@@ -1,6 +1,6 @@
 {
   "name": "promptstreak",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Your Claude Code prompting habits as a GitHub-style contribution graph. Runs locally, uploads nothing.",
   "type": "module",
   "main": "lib/index.js",
