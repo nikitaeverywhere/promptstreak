@@ -81,7 +81,8 @@
   /* calendar */
   .calwrap{overflow-x:auto;overflow-y:hidden;padding:2px 0 4px}
   .cal{display:flex;gap:6px;width:max-content;margin:0 auto}
-  .wd{display:grid;grid-template-rows:repeat(7,var(--cs));gap:var(--cg);padding-top:20px;font-size:10px;color:var(--faint);text-align:right;width:12px}
+  .wd{display:grid;grid-template-rows:repeat(7,var(--cs));gap:var(--cg);padding:20px 0 0 4px;font-size:10px;color:var(--faint);text-align:left;width:16px;
+    position:sticky;right:0;background:var(--panel);z-index:2}
   .wd span{line-height:var(--cs)}
   .months{display:flex;gap:var(--cg);height:20px;font-size:12px;color:var(--mute)}
   .months span{width:var(--cs);white-space:nowrap}
@@ -175,8 +176,12 @@
 
   @media (max-width:720px){
     .wrap{padding:24px 14px 56px}
-    header{flex-direction:column}
-    .cta{align-items:flex-start}
+    header{gap:12px}
+    h1{font-size:20px}
+    .tag,.cta small{font-size:13px}
+    .cta{max-width:56%}
+    .cta small{text-align:right}
+    .cta button{font-size:13px;padding:8px 10px;gap:8px}
     .card{padding:16px 14px 16px;border-radius:12px}
     .picks{gap:18px}
     .dd .t{font-size:19px}
@@ -213,8 +218,8 @@
       </div>
     </div>
     <div class="calwrap"><div class="cal" id="cal">
-      <div class="wd" id="wd"></div>
       <div><div class="months" id="months"></div><div class="cols" id="cols"></div></div>
+      <div class="wd" id="wd"></div>
     </div></div>
     <div class="facts" id="facts"></div>
   </div>
