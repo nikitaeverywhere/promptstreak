@@ -2,6 +2,10 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "promptstreak",
   "compatibility_date": "2026-09-01",
+  // A custom domain on a zone already in the account: Cloudflare creates the
+  // DNS record and certificate on deploy. workers.dev cannot go shorter than
+  // promptstreak.<account>.workers.dev, so the brand's own subdomain wins.
+  "routes": [{ "pattern": "promptstreak.nikitaeverywhere.com", "custom_domain": true }],
   "assets": {
     "directory": "./web",
     "html_handling": "auto-trailing-slash",

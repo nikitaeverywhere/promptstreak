@@ -76,6 +76,27 @@ function monthSegments(cols: (string | null)[][]): Seg[] {
 
 const fmt = (v: number, m: MetricDef) => `${v.toLocaleString("en-US")}${m.unit ? ` ${m.unit}` : ""}`;
 
+/**
+ * The grid is always a full year ending today, like GitHub's. Data that
+ * covers less fills its place; data older than a year falls off the left.
+ * Stats are untouched — they describe everything, the grid shows the year.
+ */
+function yearWindow(m: Metrics): Metrics {
+  const today = new Date().toLocaleDateString("en-CA");
+  const end = m.to > today ? m.to : today;
+  const start = new Date(`${end}T12:00:00`);
+  start.setDate(start.getDate() - 364);
+  const days = daysBetween(start.toLocaleDateString("en-CA"), end);
+  if (days.length === m.days.length && days[0] === m.days[0]) return m;
+  const at = new Map(m.days.map((d, i) => [d, i]));
+  const pick = (arr: number[]) => days.map((d) => { const i = at.get(d); return i === undefined ? 0 : (arr[i] ?? 0); });
+  return {
+    ...m, days,
+    series: Object.fromEntries(METRICS.map((x) => [x.key, pick(m.series[x.key])])) as Metrics["series"],
+    aux: { leashN: pick(m.aux.leashN), typed: pick(m.aux.typed) },
+  };
+}
+
 /** Cells are squares at every width: derive the size from the room available. */
 function cellSize(cols: number): number {
   const room = ($("card").clientWidth || 1000) - 48 - 18;
@@ -86,7 +107,8 @@ const isNight = (k: MetricKey | null) => !!k && !!byKey(k).night;
 
 /* ---------- calendar ---------- */
 
-function renderCalendar(m: Metrics, animate: boolean): (HTMLElement | null)[][] {
+function renderCalendar(src: Metrics, animate: boolean): (HTMLElement | null)[][] {
+  const m = yearWindow(src);
   const values = m.series[main];
   const level = levels(values);
   const over = overlay ? m.series[overlay] : null;
@@ -173,7 +195,7 @@ function showTip(anchor: Element, html: string): void {
 }
 
 function tooltipFor(day: string): string {
-  const m = metrics!;
+  const m = yearWindow(metrics!);
   const i = m.days.indexOf(day);
   const date = new Date(`${day}T12:00:00`).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short", year: "numeric" });
   const prompts = m.series.prompts[i] ?? 0;
@@ -322,7 +344,8 @@ function renderFacts(s: Stats | null): void {
   }));
 }
 
-function renderByMonth(m: Metrics | null): void {
+function renderByMonth(src: Metrics | null): void {
+  const m = src && yearWindow(src);
   const def = byKey(main);
   const bars = $("bars");
   bars.toggleAttribute("data-night", isNight(main));
@@ -484,7 +507,7 @@ const CSS = (v: string) => getComputedStyle(document.documentElement).getPropert
 function drawCard(): HTMLCanvasElement {
   const canvas = $<HTMLCanvasElement>("canvas");
   const ctx = canvas.getContext("2d")!;
-  const m = metrics!;
+  const m = yearWindow(metrics!);
   const s = m.stats;
   const W = 1200, H = 630;
   ctx.save();
