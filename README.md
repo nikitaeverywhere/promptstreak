@@ -1,6 +1,13 @@
 # promptstreak
 
+[![npm](https://img.shields.io/npm/v/promptstreak?color=40c463&label=npm)](https://www.npmjs.com/package/promptstreak)
+[![CI](https://github.com/nikitaeverywhere/promptstreak/actions/workflows/ci.yaml/badge.svg)](https://github.com/nikitaeverywhere/promptstreak/actions/workflows/ci.yaml)
+
 Your Claude Code prompting habits as a GitHub-style contribution graph.
+
+**Demo: [promptstreak.pages.dev](https://promptstreak.pages.dev) · get yours: `npx promptstreak`**
+
+[![A year of prompting, as a contribution graph](https://raw.githubusercontent.com/nikitaeverywhere/promptstreak/main/docs/promptstreak.png)](https://promptstreak.pages.dev)
 
 A commit graph stopped meaning anything the moment agents started committing daily. This one
 counts the part you actually did: **the prompts you wrote.** Ten metrics, one year, one

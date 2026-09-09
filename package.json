@@ -30,12 +30,20 @@
   },
   "keywords": [
     "claude-code",
-    "contribution-graph",
+    "claude",
+    "anthropic",
     "prompts",
+    "contribution-graph",
+    "chart",
+    "graph",
+    "heatmap",
+    "streak",
+    "year-in-review",
+    "wrapped",
+    "statistics",
     "developer-tools",
     "cli",
-    "ai-coding",
-    "statistics"
+    "ai-coding"
   ],
   "author": {
     "name": "Nikita Savchenko",
