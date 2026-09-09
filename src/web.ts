@@ -2,7 +2,7 @@ import { decode, encode } from "./codec.js";
 import { merge, parseUnknownText } from "./parse-core.js";
 import { computeMetrics } from "./metrics.js";
 import { METRICS, byKey, type MetricDef } from "./web-metrics.js";
-import { combine, daysBetween, load, save, upsert, type Snapshot } from "./web-store.js";
+import { combine, daysBetween, expand, load, save, upsert, type Snapshot } from "./web-store.js";
 import type { MetricKey, Metrics, Stats } from "./types.js";
 import { startSnake, stopSnake } from "./web-snake.js";
 
@@ -23,6 +23,8 @@ let metrics: Metrics | null = null;
 let main: MetricKey = "prompts";
 let overlay: MetricKey | null = null;
 let snaps: Snapshot[] = [];
+/** A merged link opened in a browser that holds none of its machines: show it, never store it. */
+let shared: Metrics | null = null;
 
 /* ---------- helpers ---------- */
 
@@ -301,13 +303,15 @@ type Fact = [string, string, ("g" | "n" | "dim")?];
 function factRows(s: Stats | null): Fact[] {
   if (!s) return [["—", "prompts", "dim"], ["—", "longest streak", "dim"], ["—", "God prompts", "dim"], ["—", "longest unattended run", "dim"], ["—", "words written", "dim"]];
   const [sv, sl] = spotlight(s);
-  return [
+  const rows: Fact[] = [
     [`${n(s.totalPrompts)} prompts`, `${s.activeDays} of ${s.spanDays} days`],
     [`${s.longestStreak} days`, "longest streak"],
     [n(s.godPrompts), "God prompts", "g"],
     [`${s.longestUnattendedH} h`, "longest unattended run"],
     [sv, sl, isNight(main) ? "n" : undefined],
   ];
+  if (s.machines.length > 1) rows.push([String(s.machines.length), "machines"]);
+  return rows;
 }
 
 function renderFacts(s: Stats | null): void {
@@ -316,9 +320,6 @@ function renderFacts(s: Stats | null): void {
     d.append(el("b", undefined, v), el("span", undefined, l));
     return d;
   }));
-  const from = $("from");
-  from.classList.toggle("hidden", !s || s.machines.length < 2);
-  if (s && s.machines.length >= 2) from.textContent = `From ${s.machines.length} machines — ${s.machines.join(", ")}`;
 }
 
 function renderByMonth(m: Metrics | null): void {
@@ -366,15 +367,27 @@ const trend = (vals: number[]) => {
 };
 
 function renderMore(s: Stats): void {
-  const group = (title: string, rows: Array<[string, string]>, note?: string) => {
+  const group = (title: string, rows: Array<[string, string, string?]>, tip?: string) => {
     const g = el("div", "group");
-    g.append(el("h3", undefined, title));
-    for (const [v, l] of rows) {
+    const h = el("h3", undefined, title);
+    if (tip) {
+      const q = el("button", "q", "?");
+      q.dataset.tip = tip;
+      q.setAttribute("aria-label", `About ${title}`);
+      h.append(q);
+    }
+    g.append(h);
+    for (const [v, l, rowTip] of rows) {
       const r = el("div", "r");
       r.append(el("b", undefined, v), el("span", undefined, l));
+      if (rowTip) {
+        const q = el("button", "q", "?");
+        q.dataset.tip = rowTip;
+        q.setAttribute("aria-label", `About ${l}`);
+        r.append(q);
+      }
       g.append(r);
     }
-    if (note) g.append(el("div", "note", note));
     return g;
   };
   const groups = [
@@ -388,10 +401,15 @@ function renderMore(s: Stats): void {
     ]),
   ];
   if (s.tokens) {
+    const t = s.tokens;
     const M = (x: number) => (x >= 1e9 ? `${(x / 1e9).toFixed(1)}B` : `${(x / 1e6).toFixed(1)}M`);
-    groups.push(group("Last 30 days", [
-      [M(s.tokens.total), "tokens, all in"], [M(s.tokens.output), "tokens written back"], [n(s.tokens.toolCalls), "tool calls"], [n(s.tokens.subagents), "subagents spawned"],
-    ], "From session transcripts, which Claude Code prunes — only a recent window survives."));
+    const rows: Array<[string, string, string?]> = [
+      [M(t.total), "tokens, all in"], [M(t.output), "tokens written back"], [n(t.toolCalls), "tool calls"], [n(t.subagents), "subagents spawned"],
+    ];
+    if (t.usd) rows.push([`$${n(t.usd)}`, "at API list prices",
+      `What the same tokens would cost on the Anthropic API at list prices as of ${t.usdAsOf}, cache reads and writes included. A Claude Code subscription bills differently — this is the equivalent, not a bill.${t.unpriced?.length ? ` Not priced: ${t.unpriced.join(", ")}.` : ""}`]);
+    groups.push(group("Last 30 days", rows,
+      "From session transcripts. Claude Code prunes those after a while, so only a recent window survives — this is a fixed 30 days, not the year."));
   }
   $("groups").replaceChildren(...groups);
   $("moreHint").textContent = s.tokens ? "writing, delegating, tokens" : "writing, delegating";
@@ -400,6 +418,19 @@ function renderMore(s: Stats): void {
 /* ---------- machines ---------- */
 
 function renderMachines(): void {
+  if (viewingShared()) {
+    const chips = shared!.stats.machines.map((m) => {
+      const chip = el("span", "chip");
+      chip.toggleAttribute("data-on", true);
+      chip.dataset.tip = "Part of the shared view you opened";
+      chip.append(el("i"), el("span", undefined, m));
+      return chip;
+    });
+    const add = el("button", "chip add", "+ Add your own machine");
+    add.onclick = () => $("addpanel").classList.toggle("hidden");
+    $("chips").replaceChildren(...chips, add);
+    return;
+  }
   const items: HTMLElement[] = snaps.map((s) => {
     const chip = el("button", "chip") as HTMLButtonElement;
     chip.toggleAttribute("data-on", s.on);
@@ -427,7 +458,14 @@ function renderMachines(): void {
   $("chips").replaceChildren(...items);
 }
 
+const viewingShared = () => !!shared && !shared.stats.machines.some((m) => snaps.some((s) => s.machine === m));
+
 function rebuild(): void {
+  if (viewingShared()) {
+    metrics = shared;
+    render(true);
+    return;
+  }
   const on = snaps.filter((s) => s.on);
   if (!on.length) {
     metrics = null;
@@ -527,8 +565,10 @@ function drawCard(): HTMLCanvasElement {
   ctx.strokeStyle = CSS("--line");
   ctx.beginPath(); ctx.moveTo(60, fy - 46); ctx.lineTo(W - 60, fy - 46); ctx.stroke();
   const facts = factRows(s);
+  const slot = (W - 120) / facts.length;
+  ctx.textAlign = "center";
   facts.forEach(([v, l, tone], i) => {
-    const fx = 60 + i * ((W - 120) / facts.length);
+    const fx = 60 + slot * (i + 0.5);
     ctx.fillStyle = CSS(tone === "g" ? "--gold" : tone === "n" ? "--n4" : "--ink");
     ctx.font = `600 25px ${mono}`;
     ctx.fillText(v, fx, fy);
@@ -536,10 +576,10 @@ function drawCard(): HTMLCanvasElement {
     ctx.font = `400 14px ${sans}`;
     ctx.fillText(l, fx, fy + 24);
   });
+  ctx.textAlign = "left";
   ctx.fillStyle = CSS("--faint");
   ctx.font = `400 14px ${sans}`;
-  const from = s.machines.length >= 2 ? `   ·   From ${s.machines.length} machines` : "";
-  ctx.fillText(`${m.from} → ${m.to}${from}`, 60, H - 36);
+  ctx.fillText(`${m.from} → ${m.to}`, 60, H - 36);
   ctx.restore();
   return canvas;
 }
@@ -614,7 +654,14 @@ async function importHash(): Promise<void> {
   const hash = location.hash.slice(1);
   if (!hash) return;
   try {
-    snaps = upsert(await decode(hash));
+    const payload = await decode(hash);
+    // The page rewrites the URL with the merged view after a merge. Re-reading
+    // that as a machine would overwrite a real machine with the merged data.
+    if (payload.stats.machines.length > 1) shared = expand(payload);
+    else {
+      shared = null;
+      snaps = upsert(payload);
+    }
   } catch (err) {
     console.error("Could not read that link:", err);
     toast("That link could not be read");

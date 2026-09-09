@@ -55,6 +55,12 @@ export interface TokenStats {
   toDay: string;
   toolCalls: number;
   subagents: number;
+  /** What the same usage would cost on the API at list prices, if every model was priced. */
+  usd?: number;
+  /** As-of month of the price table, e.g. "Jun 2026". */
+  usdAsOf?: string;
+  /** Models we saw but have no price for — the estimate excludes them. */
+  unpriced?: string[];
 }
 
 export interface Stats {

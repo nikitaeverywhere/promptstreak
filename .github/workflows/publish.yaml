@@ -1,13 +1,17 @@
-name: Publish NPM package
+name: Publish to npm
+
+# Trusted publishing: no token in the repo. npm mints a short-lived credential
+# from the GitHub OIDC token, and provenance is attached automatically.
+# The trusted publisher must be configured on npmjs.com for this package first
+# (package settings -> Trusted publishing -> GitHub Actions, this repo, this file).
 
 on:
   push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+    tags: ['v*']
 
-env:
-  NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+permissions:
+  contents: read
+  id-token: write
 
 jobs:
   publish:
@@ -17,10 +21,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: npm install
+          registry-url: 'https://registry.npmjs.org'
+      # Trusted publishing needs npm 11.5.1 or newer; Node 22 ships older.
+      - run: npm install -g npm@latest
+      - run: npm ci
       - run: npm run build
       - run: npm test
-      - uses: JS-DevTools/npm-publish@v3
-        if: ${{ github.ref == 'refs/heads/main' }}
-        with:
-          token: ${{ env.NPM_TOKEN }}
+      - run: npm publish --access public

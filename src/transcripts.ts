@@ -10,6 +10,26 @@ const IDLE_BREAK_MS = 2 * 3600_000;
 /** Transcripts are pruned unevenly, so tokens are reported for a fixed window. */
 export const TOKEN_WINDOW_DAYS = 30;
 
+/**
+ * Anthropic list prices per million tokens. Cache writes are 1.25× input and
+ * cache reads 0.1× input, except Fable 5.1 reads at a flat $0.25. This table
+ * goes stale — the as-of month travels with the number so nobody mistakes it
+ * for a bill.
+ */
+export const PRICE_AS_OF = "Jun 2026";
+const PRICE: Record<string, { in: number; out: number; cw: number; cr: number }> = {
+  "claude-fable-5-1": { in: 10, out: 50, cw: 12.5, cr: 0.25 },
+  "claude-fable-5": { in: 10, out: 50, cw: 12.5, cr: 1 },
+  "claude-opus-5": { in: 5, out: 25, cw: 6.25, cr: 0.5 },
+  "claude-opus-4-8": { in: 5, out: 25, cw: 6.25, cr: 0.5 },
+  "claude-opus-4-7": { in: 5, out: 25, cw: 6.25, cr: 0.5 },
+  "claude-opus-4-6": { in: 5, out: 25, cw: 6.25, cr: 0.5 },
+  "claude-sonnet-5": { in: 2, out: 10, cw: 2.5, cr: 0.2 },
+  "claude-sonnet-4-6": { in: 3, out: 15, cw: 3.75, cr: 0.3 },
+  "claude-haiku-4-5": { in: 1, out: 5, cw: 1.25, cr: 0.1 },
+};
+const priceFor = (model: string) => PRICE[model.replace(/-\d{8}$/, "")];
+
 export interface TranscriptScan {
   events: PromptEvent[];
   tokens: TokenStats;
@@ -57,6 +77,8 @@ export function scanTranscripts(files: string[], onProgress?: (done: number, tot
   let maxTs = 0;
   const seenUsage = new Set<string>();
   const subagentIds = new Set<string>();
+  let usd = 0;
+  const unpriced = new Set<string>();
 
   files.forEach((file, fi) => {
     onProgress?.(fi + 1, files.length);
@@ -92,6 +114,16 @@ export function scanTranscripts(files: string[], onProgress?: (done: number, tot
           tokens.output += u.output_tokens || 0;
           tokens.cacheWrite += u.cache_creation_input_tokens || 0;
           tokens.cacheRead += u.cache_read_input_tokens || 0;
+          const model = typeof o.message.model === "string" ? o.message.model : "";
+          const price = model ? priceFor(model) : undefined;
+          if (price) {
+            usd +=
+              ((u.input_tokens || 0) * price.in +
+                (u.output_tokens || 0) * price.out +
+                (u.cache_creation_input_tokens || 0) * price.cw +
+                (u.cache_read_input_tokens || 0) * price.cr) /
+              1e6;
+          } else if (model && !model.startsWith("<")) unpriced.add(model);
         }
         for (const b of o.message.content ?? []) {
           if (b?.type === "tool_use") {
@@ -123,6 +155,11 @@ export function scanTranscripts(files: string[], onProgress?: (done: number, tot
   });
 
   tokens.total = tokens.input + tokens.output + tokens.cacheRead + tokens.cacheWrite;
+  if (usd > 0) {
+    tokens.usd = Math.round(usd);
+    tokens.usdAsOf = PRICE_AS_OF;
+    if (unpriced.size) tokens.unpriced = [...unpriced];
+  }
   tokens.fromDay = Number.isFinite(minTs) ? new Date(minTs).toLocaleDateString("en-CA") : "";
   tokens.toDay = maxTs ? new Date(maxTs).toLocaleDateString("en-CA") : "";
 

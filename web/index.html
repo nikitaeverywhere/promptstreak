@@ -29,16 +29,16 @@
   .hidden{display:none!important}
 
   /* header */
-  header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:20px}
+  header{display:flex;justify-content:space-between;align-items:stretch;gap:16px;margin-bottom:20px}
+  header>div{display:flex;flex-direction:column;justify-content:space-between;gap:6px}
   h1{font-size:22px;margin:0;letter-spacing:-.01em;font-weight:700;line-height:1.2}
   h1 b{color:var(--g4)}
-  .tag{font-size:15px;color:var(--mute);margin-top:2px}
-  .cta{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+  .tag,.cta small{font-size:15px;line-height:1.4;color:var(--mute)}
+  .cta{align-items:flex-end}
   .cta button{display:flex;align-items:center;gap:10px;padding:9px 13px;border:1px solid var(--line);border-radius:9px;
     background:var(--panel);font:500 15px var(--mono);transition:border-color .15s}
   .cta button:hover{border-color:var(--faint)}
   .cta button svg{width:14px;height:14px;color:var(--mute)}
-  .cta small{font-size:13px;color:var(--faint)}
 
   /* help marks */
   .q{display:inline-grid;place-items:center;width:17px;height:17px;border-radius:50%;border:1px solid var(--line2);color:var(--faint);
@@ -112,13 +112,12 @@
   #tip em{color:var(--gold);font-style:normal;display:block}
   #tip em.n{color:var(--n4)}
 
-  .facts{display:flex;gap:36px;flex-wrap:wrap;margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
+  .facts{display:flex;gap:40px;flex-wrap:wrap;justify-content:center;text-align:center;margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
   .fact b{font-family:var(--mono);font-size:21px;font-weight:600;display:block;letter-spacing:-.02em;line-height:1.2}
   .fact span{font-size:13.5px;color:var(--mute)}
   .fact.g b{color:var(--gold)}
   .fact.n b{color:var(--n4)}
   .fact.dim b{color:var(--faint)}
-  .from{margin-top:12px;font-size:13px;color:var(--faint)}
 
   /* below the card */
   section{margin-top:36px}
@@ -141,11 +140,10 @@
   details.more[open] summary svg{transform:rotate(180deg)}
   details.more[open] summary{border-bottom:1px solid var(--line)}
   .groups{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px 36px;padding:18px 18px 20px}
-  .group h3{font-size:14px;font-weight:600;margin:0 0 10px}
+  .group h3{font-size:14px;font-weight:600;margin:0 0 10px;display:flex;align-items:center}
   .group .r{display:flex;align-items:baseline;gap:8px;padding:4px 0}
   .group .r b{font-family:var(--mono);font-size:15.5px;font-weight:600;min-width:80px}
   .group .r span{font-size:14px;color:var(--mute)}
-  .group .note{font-size:12.5px;color:var(--faint);margin-top:8px}
 
   .chips{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
   .chip{display:flex;align-items:center;gap:8px;padding:8px 13px;border:1px solid var(--line);border-radius:999px;font:14px var(--mono);
@@ -219,7 +217,6 @@
       <div><div class="months" id="months"></div><div class="cols" id="cols"></div></div>
     </div></div>
     <div class="facts" id="facts"></div>
-    <div class="from hidden" id="from"></div>
   </div>
 
   <section id="bymonth">
@@ -248,12 +245,12 @@
 
   <footer>
     Everything runs in the browser only. The share link carries view data only, never the source.<br>
-    <a href="/" id="domain">promptstreak</a> · <a href="https://github.com/nikitaeverywhere/promptstreak">Source</a> · built by <a href="https://nikitaeverywhere.com">Nikita Savchenko</a>
+    <a href="/" id="domain">promptstreak</a> · <a href="https://github.com/nikitaeverywhere/promptstreak">Source</a> · built with 💚 by <a href="https://nikitaeverywhere.com">Nikita Savchenko</a>
   </footer>
 </div>
 <div id="tip"></div>
 <div class="toast" id="toast"></div>
 <canvas id="canvas" width="2400" height="1260"></canvas>
-<script type="module" src="./app.js?v=fa77a3ba1b"></script>
+<script type="module" src="./app.js?v=a088684b37"></script>
 </body>
 </html>
