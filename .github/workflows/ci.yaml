@@ -8,20 +8,19 @@ on:
 
 permissions:
   contents: read
-  pull-requests: write
 
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@{"message":"Not Found","documentation_url":"https://docs.github.com/rest/git/tags#get-a-tag","status":"404"} # v4
+      - uses: actions/setup-node@{"message":"Not Found","documentation_url":"https://docs.github.com/rest/git/tags#get-a-tag","status":"404"} # v4
         with:
           node-version: '22'
       - run: npm ci
       - run: npm run build
       - run: npm test
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@{"message":"Not Found","documentation_url":"https://docs.github.com/rest/git/tags#get-a-tag","status":"404"} # v4
         with:
           name: web
           path: web
@@ -29,17 +28,21 @@ jobs:
   # Pushes to main go to promptstreak.pages.dev; pull requests get
   # <branch>.promptstreak.pages.dev. Needs CLOUDFLARE_API_TOKEN (Pages: Edit)
   # and CLOUDFLARE_ACCOUNT_ID in the repo secrets.
+  #
+  # Fork pull requests never see secrets — GitHub withholds them on the
+  # pull_request event — and the guard below skips the deploy for them anyway,
+  # so this job only runs for main and for branches pushed by collaborators.
   deploy:
     needs: test
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@{"message":"Not Found","documentation_url":"https://docs.github.com/rest/git/tags#get-a-tag","status":"404"} # v4
+      - uses: actions/download-artifact@{"message":"Not Found","documentation_url":"https://docs.github.com/rest/git/tags#get-a-tag","status":"404"} # v4
         with:
           name: web
           path: web
-      - uses: cloudflare/wrangler-action@v3
+      - uses: cloudflare/wrangler-action@{"message":"Not Found","documentation_url":"https://docs.github.com/rest/git/tags#get-a-tag","status":"404"} # v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
