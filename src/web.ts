@@ -61,8 +61,9 @@ function monthSegments(cols: (string | null)[][]): Seg[] {
       if (!day) return;
       const month = new Date(`${day}T12:00:00`).getMonth();
       if (month === lastMonth) return;
+      const first = lastMonth === -1;
       lastMonth = month;
-      if (c === 0 && r === 0) return;
+      if (first) return;
       if (r === 0) out.push({ x1: c, y1: 0, x2: c, y2: 7 });
       else {
         out.push({ x1: c, y1: r, x2: c, y2: 7 });
@@ -518,6 +519,14 @@ function drawCard(): HTMLCanvasElement {
   const mono = CSS("--mono");
   const def = byKey(main);
   const night = isNight(main);
+  {
+    // Everything below is laid out from the top; shift it so the block sits centred.
+    const colsN = columns(m.days).length;
+    const gap = 4;
+    const cell = Math.floor((W - 120 - (colsN - 1) * gap) / colsN);
+    const bottom = 166 + 7 * (cell + gap) + 70 + 30;
+    ctx.translate(0, Math.max(0, Math.floor((H - bottom - 50) / 2)));
+  }
   const ovNight = isNight(overlay);
   const ramp = night ? ["--empty", "--n1", "--n2", "--n3", "--n4"] : ["--empty", "--g1", "--g2", "--g3", "--g4"];
 
@@ -600,9 +609,6 @@ function drawCard(): HTMLCanvasElement {
     ctx.fillText(l, fx, fy + 24);
   });
   ctx.textAlign = "left";
-  ctx.fillStyle = CSS("--faint");
-  ctx.font = `400 14px ${sans}`;
-  ctx.fillText(`${m.from} → ${m.to}`, 60, H - 36);
   ctx.restore();
   return canvas;
 }
