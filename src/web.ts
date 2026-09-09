@@ -548,7 +548,7 @@ function drawCard(): HTMLCanvasElement {
   ctx.font = `500 19px ${mono}`;
   ctx.fillText("npx promptstreak", W - 60, 72);
   ctx.fillStyle = CSS("--faint");
-  ctx.font = `400 14px ${sans}`;
+  ctx.font = `400 14px ${mono}`;
   ctx.fillText("to get yours", W - 60, 96);
   ctx.textAlign = "left";
 
