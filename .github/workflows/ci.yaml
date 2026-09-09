@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -17,3 +21,26 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm test
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web
+          path: web
+
+  # Pushes to main go to promptstreak.pages.dev; pull requests get
+  # <branch>.promptstreak.pages.dev. Needs CLOUDFLARE_API_TOKEN (Pages: Edit)
+  # and CLOUDFLARE_ACCOUNT_ID in the repo secrets.
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: web
+          path: web
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy --branch ${{ github.event_name == 'push' && 'main' || github.head_ref }}

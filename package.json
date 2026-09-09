@@ -44,7 +44,7 @@
   "bugs": {
     "url": "https://github.com/nikitaeverywhere/promptstreak/issues"
   },
-  "homepage": "https://github.com/nikitaeverywhere/promptstreak#readme",
+  "homepage": "https://promptstreak.pages.dev",
   "devDependencies": {
     "@types/node": "^22.0.0",
     "esbuild": "^0.28.2",

@@ -9,7 +9,7 @@ import { encode } from "./codec.js";
 import { METRIC_LABELS, renderGrid, renderLegend, renderStats } from "./render.js";
 import type { MetricKey, PromptEvent } from "./types.js";
 
-const WEB_URL = process.env.PROMPTSTREAK_URL ?? "https://promptstreak.nikitaeverywhere.com";
+const WEB_URL = process.env.PROMPTSTREAK_URL ?? "https://promptstreak.pages.dev";
 
 const HELP = `
 promptstreak — your Claude Code prompting habits as a contribution graph

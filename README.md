@@ -11,7 +11,7 @@ npx promptstreak
 ```
 
 Reads your local Claude Code history, prints the graph in your terminal, and opens a shareable
-version in the browser. **Nothing is uploaded** — not by the CLI, and not by the page.
+version at [promptstreak.pages.dev](https://promptstreak.pages.dev). **Nothing is uploaded** — not by the CLI, and not by the page.
 
 ## What it measures
 
