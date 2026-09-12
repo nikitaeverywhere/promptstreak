@@ -22,7 +22,11 @@ export type MetricKey =
   | "autonomy"
   | "overnight"
   | "nightOwl"
-  | "politeness";
+  | "politeness"
+  | "swearing"
+  | "annoyed"
+  | "caps"
+  | "thanks";
 
 export type Archetype = "Babysitter" | "Collaborator" | "Orchestrator";
 
@@ -41,6 +45,14 @@ export interface Metrics {
    */
   aux: { leashN: number[]; typed: number[] };
   stats: Stats;
+  /** Redacted, ranked lines worth quoting. Absent when the user opted out. */
+  quotes?: Quote[];
+}
+
+export interface Quote {
+  t: string;
+  c: string;
+  d: string;
 }
 
 /** Real usage from transcripts — never estimated. Recent window only. */
@@ -103,6 +115,12 @@ export interface Stats {
   please: number;
   thanks: number;
   sorry: number;
+  swearing: number;
+  annoyed: number;
+  capsRage: number;
+  banter: number;
+  ultrathink: number;
+  goAhead: number;
   /** Most repeated short prompts, biggest first. */
   topNudges: Array<[string, number]>;
   /** Hostnames whose history is folded into this view. */

@@ -54,13 +54,22 @@ export const daysBetween = (from: string, to: string): string[] => {
   return out;
 };
 
+/** Payloads made before a metric existed carry no series for it; treat that as zeros. */
+const fill = (p: Payload): Metrics["series"] => {
+  const n = daysBetween(p.from, p.to).length;
+  const out = { ...p.series } as Metrics["series"];
+  for (const m of METRICS) if (!Array.isArray(out[m.key])) out[m.key] = new Array(n).fill(0);
+  return out;
+};
+
 export const expand = (p: Payload): Metrics => ({
   from: p.from,
   to: p.to,
   days: daysBetween(p.from, p.to),
-  series: p.series,
+  series: fill(p),
   aux: p.aux,
   stats: p.stats,
+  ...(p.quotes?.length ? { quotes: p.quotes } : {}),
 });
 
 /**
@@ -84,13 +93,14 @@ export function combine(snaps: Snapshot[]): Metrics {
   const aux = { leashN: zeros(), typed: zeros() };
 
   for (const snap of snaps) {
+    const sseries = fill(snap);
     daysBetween(snap.from, snap.to).forEach((day, si) => {
       const i = at.get(day);
       if (i === undefined) return;
-      const leashN = snap.aux.leashN[si] ?? (snap.series.leash[si] ? 1 : 0);
-      const typed = snap.aux.typed[si] ?? snap.series.prompts[si] ?? 0;
+      const leashN = snap.aux.leashN[si] ?? (sseries.leash[si] ? 1 : 0);
+      const typed = snap.aux.typed[si] ?? sseries.prompts[si] ?? 0;
       for (const m of METRICS) {
-        const v = snap.series[m.key]?.[si] ?? 0;
+        const v = sseries[m.key]?.[si] ?? 0;
         if (m.key === "leash") series.leash[i] += v * leashN;
         else if (m.key === "promptWords") series.promptWords[i] += v * typed;
         else series[m.key][i] += v;
@@ -141,10 +151,18 @@ export function combine(snaps: Snapshot[]): Metrics {
     maxLength: Math.max(...snaps.map((s) => s.stats.maxLength)),
     maxWords: Math.max(...snaps.map((s) => s.stats.maxWords)),
     machines: snaps.map((s) => s.machine),
+    swearing: sum((s) => s.swearing ?? 0),
+    annoyed: sum((s) => s.annoyed ?? 0),
+    capsRage: sum((s) => s.capsRage ?? 0),
+    banter: sum((s) => s.banter ?? 0),
+    ultrathink: sum((s) => s.ultrathink ?? 0),
+    goAhead: sum((s) => s.goAhead ?? 0),
     ...streaks(days, series.prompts),
   };
 
-  return { from, to, days, series, aux, stats };
+  // Quotes from every machine, most recent first, capped like a single one.
+  const quotes = snaps.flatMap((s) => s.quotes ?? []).sort((a, b) => (a.d < b.d ? 1 : -1)).slice(0, 10);
+  return { from, to, days, series, aux, stats, ...(quotes.length ? { quotes } : {}) };
 }
 
 function streaks(days: string[], prompts: number[]) {

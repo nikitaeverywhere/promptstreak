@@ -23,6 +23,8 @@
     --ink:#e8edf3;--mute:#8a97a6;--faint:#5a6673;--empty:#171d25;--empty2:#1b222b;
     --g1:#0e4429;--g2:#216e39;--g3:#30a14e;--g4:#40c463;
     --n1:#2e1a5e;--n2:#4c2a94;--n3:#7c4fd6;--n4:#a78bfa;
+    --h1:#4a1d12;--h2:#7c2d12;--h3:#c2410c;--h4:#fb923c;
+    --w1:#0f3f3a;--w2:#0f766e;--w3:#14b8a6;--w4:#5eead4;
     --gold:#ffd34d;--gold2:#c99a20;
     --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
     --ease:cubic-bezier(.22,.61,.36,1);--cs:12px;--cg:3px;
@@ -68,7 +70,9 @@
   .dd.over:hover,.dd.over[data-open],.dd.over[data-on]{opacity:1}
   .dd.over .t{color:var(--mute);font-weight:600}
   .dd.over[data-on] .t{color:var(--gold)}
-  .dd.over[data-on][data-night] .t{color:var(--n4)}
+  .dd.over[data-on][data-tone="night"] .t{color:var(--n4)}
+  .dd.over[data-on][data-tone="heat"] .t{color:var(--h4)}
+  .dd.over[data-on][data-tone="warm"] .t{color:var(--w4)}
   .dd.over[data-on] .t svg{color:inherit;opacity:.7}
   .dd.wait .t{color:var(--mute)}
   .menu{position:absolute;top:calc(100% + 8px);left:-8px;z-index:40;width:360px;max-height:min(72vh,560px);overflow:auto;
@@ -102,12 +106,20 @@
   .cell[data-odd][data-l="0"]{background:var(--empty2)}
   .cell[data-l="1"]{background:var(--g1)}.cell[data-l="2"]{background:var(--g2)}
   .cell[data-l="3"]{background:var(--g3)}.cell[data-l="4"]{background:var(--g4)}
-  .cal[data-night] .cell[data-l="1"]{background:var(--n1)}.cal[data-night] .cell[data-l="2"]{background:var(--n2)}
-  .cal[data-night] .cell[data-l="3"]{background:var(--n3)}.cal[data-night] .cell[data-l="4"]{background:var(--n4)}
+  .cal[data-tone="night"] .cell[data-l="1"]{background:var(--n1)}.cal[data-tone="night"] .cell[data-l="2"]{background:var(--n2)}
+  .cal[data-tone="night"] .cell[data-l="3"]{background:var(--n3)}.cal[data-tone="night"] .cell[data-l="4"]{background:var(--n4)}
+  .cal[data-tone="heat"] .cell[data-l="1"]{background:var(--h1)}.cal[data-tone="heat"] .cell[data-l="2"]{background:var(--h2)}
+  .cal[data-tone="heat"] .cell[data-l="3"]{background:var(--h3)}.cal[data-tone="heat"] .cell[data-l="4"]{background:var(--h4)}
+  .cal[data-tone="warm"] .cell[data-l="1"]{background:var(--w1)}.cal[data-tone="warm"] .cell[data-l="2"]{background:var(--w2)}
+  .cal[data-tone="warm"] .cell[data-l="3"]{background:var(--w3)}.cal[data-tone="warm"] .cell[data-l="4"]{background:var(--w4)}
   .cell[data-l][data-ov="1"]{background:var(--gold2)}
   .cell[data-l][data-ov="2"]{background:var(--gold);box-shadow:0 0 6px rgba(255,211,77,.45)}
-  .cal[data-ovnight] .cell[data-l][data-ov="1"]{background:var(--n3);box-shadow:none}
-  .cal[data-ovnight] .cell[data-l][data-ov="2"]{background:var(--n4);box-shadow:0 0 6px rgba(167,139,250,.45)}
+  .cal[data-ovtone="night"] .cell[data-l][data-ov="1"]{background:var(--n3);box-shadow:none}
+  .cal[data-ovtone="night"] .cell[data-l][data-ov="2"]{background:var(--n4);box-shadow:0 0 6px rgba(167,139,250,.45)}
+  .cal[data-ovtone="heat"] .cell[data-l][data-ov="1"]{background:var(--h3);box-shadow:none}
+  .cal[data-ovtone="heat"] .cell[data-l][data-ov="2"]{background:var(--h4);box-shadow:0 0 6px rgba(251,146,60,.45)}
+  .cal[data-ovtone="warm"] .cell[data-l][data-ov="1"]{background:var(--w3);box-shadow:none}
+  .cal[data-ovtone="warm"] .cell[data-l][data-ov="2"]{background:var(--w4);box-shadow:0 0 6px rgba(94,234,212,.45)}
   .cell[data-void]{background:transparent}
   .cell[data-day]:hover{transform:scale(1.35);z-index:5}
   @keyframes pop{from{opacity:0;transform:scale(.5)}to{opacity:1;transform:none}}
@@ -119,14 +131,28 @@
   #tip b{display:block;font-size:13.5px;margin-bottom:2px}
   #tip i{color:var(--mute);font-style:normal}
   #tip em{color:var(--gold);font-style:normal;display:block}
-  #tip em.n{color:var(--n4)}
+  #tip em.n{color:var(--n4)} #tip em.h{color:var(--h4)} #tip em.w{color:var(--w4)}
 
   .facts{display:flex;gap:40px;flex-wrap:wrap;justify-content:center;text-align:center;margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
   .fact b{font-family:var(--mono);font-size:21px;font-weight:600;display:block;letter-spacing:-.02em;line-height:1.2}
   .fact span{font-size:13.5px;color:var(--mute)}
   .fact.g b{color:var(--gold)}
-  .fact.n b{color:var(--n4)}
+  .fact.n b{color:var(--n4)} .fact.h b{color:var(--h4)} .fact.w b{color:var(--w4)}
   .fact.dim b{color:var(--faint)}
+
+  /* things you said */
+  .quotes{margin-top:16px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 24px 20px}
+  .quotes .qh{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+  .quotes h2{margin:0;font-size:16px}
+  .qgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 28px}
+  .quote{padding:10px 0;display:flex;flex-direction:column;gap:6px;min-width:0}
+  .quote p{margin:0;font-size:16px;line-height:1.45;color:var(--ink);overflow-wrap:anywhere}
+  .quote p::before{content:"“";color:var(--faint)} .quote p::after{content:"”";color:var(--faint)}
+  .quote .qm{display:flex;gap:8px;align-items:center;font-size:12px;color:var(--faint)}
+  .quote .tag{padding:2px 8px;border-radius:999px;border:1px solid var(--line2);color:var(--mute);font-weight:500}
+  .quote .tag[data-tone="heat"]{color:var(--h4);border-color:#5a2a15}
+  .quote .tag[data-tone="warm"]{color:var(--w4);border-color:#144d47}
+  @media (max-width:720px){.qgrid{grid-template-columns:1fr}.quotes{padding:16px 14px}}
 
   /* below the card */
   section{margin-top:36px}
@@ -136,8 +162,9 @@
   .bar{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1 1 60px;max-width:96px;min-width:36px}
   .bar i{width:100%;max-width:44px;background:var(--g2);border-radius:4px 4px 0 0;min-height:3px;transition:height .4s var(--ease),background .3s}
   .bar.last i{background:var(--g4)}
-  .bars[data-night] .bar i{background:var(--n2)}
-  .bars[data-night] .bar.last i{background:var(--n4)}
+  .bars[data-tone="night"] .bar i{background:var(--n2)} .bars[data-tone="night"] .bar.last i{background:var(--n4)}
+  .bars[data-tone="heat"] .bar i{background:var(--h2)} .bars[data-tone="heat"] .bar.last i{background:var(--h4)}
+  .bars[data-tone="warm"] .bar i{background:var(--w2)} .bars[data-tone="warm"] .bar.last i{background:var(--w4)}
   .bar span{font-size:12px;color:var(--faint);margin-bottom:6px}
 
   details.more{margin-top:28px;border:1px solid var(--line);border-radius:12px;background:var(--glass);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
@@ -232,6 +259,13 @@
     <div class="facts" id="facts"></div>
   </div>
 
+  <div class="quotes hidden" id="quotes">
+    <div class="qh"><h2>Things you said</h2>
+      <button class="ico" id="qpng" data-tip="Download quotes as PNG" aria-label="Download quotes as PNG"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg></button>
+    </div>
+    <div class="qgrid" id="qgrid"></div>
+  </div>
+
   <section id="bymonth">
     <h2><span id="trendH">Prompts by month</span><button class="q" id="trendQ" aria-label="About this chart">?</button></h2>
     <div class="barwrap"><div class="bars" id="bars"></div></div>
@@ -264,6 +298,7 @@
 <div id="tip"></div>
 <div class="toast" id="toast"></div>
 <canvas id="canvas" width="2400" height="1260"></canvas>
-<script type="module" src="./app.js?v=cc5c4e701f"></script>
+<canvas id="qcanvas" width="2400" height="1260" style="display:none"></canvas>
+<script type="module" src="./app.js?v=fc7504dc04"></script>
 </body>
 </html>

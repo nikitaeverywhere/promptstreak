@@ -111,7 +111,10 @@ function cellSize(cols: number): number {
   return Math.max(8, Math.min(17, Math.floor((room - (cols - 1) * GAP) / cols)));
 }
 
-const isNight = (k: MetricKey | null) => !!k && !!byKey(k).night;
+type Tone = "night" | "heat" | "warm" | null;
+const toneOf = (k: MetricKey | null): Tone => (k ? byKey(k).tone ?? null : null);
+const isNight = (k: MetricKey | null) => toneOf(k) === "night";
+const toneClass = (t: Tone) => (t === "night" ? "n" : t === "heat" ? "h" : t === "warm" ? "w" : "");
 
 /* ---------- calendar ---------- */
 
@@ -128,8 +131,9 @@ function renderCalendar(src: Metrics, animate: boolean): (HTMLElement | null)[][
   document.documentElement.style.setProperty("--cs", `${cs}px`);
   document.documentElement.style.setProperty("--cg", `${GAP}px`);
   const cal = $("cal");
-  cal.toggleAttribute("data-night", isNight(main));
-  cal.toggleAttribute("data-ovnight", isNight(overlay));
+  const tone = toneOf(main), ovTone = toneOf(overlay);
+  if (tone) cal.dataset.tone = tone; else delete cal.dataset.tone;
+  if (ovTone) cal.dataset.ovtone = ovTone; else delete cal.dataset.ovtone;
   $("wd").replaceChildren(...WEEKDAYS.map((d) => el("span", undefined, d)));
 
   const monthFrag = document.createDocumentFragment();
@@ -217,7 +221,7 @@ function tooltipFor(day: string): string {
   if (overlay && overlay !== "godPrompts") {
     const ov = m.series[overlay][i] ?? 0;
     const d = byKey(overlay);
-    if (ov > 0) out.push(`<em class="${d.night ? "n" : ""}">${fmt(ov, d)} ${d.label.toLowerCase()}</em>`);
+    if (ov > 0) out.push(`<em class="${toneClass(toneOf(overlay))}">${fmt(ov, d)} ${d.label.toLowerCase()}</em>`);
   }
   return out.join(" ");
 }
@@ -302,13 +306,14 @@ function renderPickers(): void {
   buildMenu(dd, {
     current: overlay,
     title: ov ? `+ ${ov.label}` : "+ Overlay",
-    hint: ov ? (ov.night ? "Shown in purple on top" : "Shown in gold on top") : "Highlight a second thing on top",
+    hint: ov ? `Shown in ${ov.tone === "night" ? "purple" : ov.tone === "heat" ? "red" : ov.tone === "warm" ? "teal" : "gold"} on top` : "Highlight a second thing on top",
     items: METRICS.filter((m) => m.overlay && m.key !== main),
     none: "None",
     onPick: (k) => { overlay = k; render(true); },
   });
   dd.toggleAttribute("data-on", !!overlay);
-  dd.toggleAttribute("data-night", isNight(overlay));
+  const ot = toneOf(overlay);
+  if (ot) dd.dataset.tone = ot; else delete dd.dataset.tone;
 }
 
 /* ---------- stats ---------- */
@@ -325,11 +330,15 @@ function spotlight(s: Stats): [string, string] {
     case "overnight": return [short(s.overnightHandoffs), "overnight handoffs"];
     case "nightOwl": return [short(s.afterMidnight), "prompts after midnight"];
     case "politeness": return [short(s.please), "times you said please"];
+    case "swearing": return [short(s.swearing ?? 0), "swears"];
+    case "annoyed": return [short(s.annoyed ?? 0), "times annoyed"];
+    case "caps": return [short(s.capsRage ?? 0), "caps-lock moments"];
+    case "thanks": return [short(metrics?.series.thanks.reduce((a, b) => a + b, 0) ?? 0), "thank-yous"];
     default: return [short(s.words), "words written"];
   }
 }
 
-type Fact = [string, string, ("g" | "n" | "dim")?];
+type Fact = [string, string, ("g" | "n" | "h" | "w" | "dim")?];
 function factRows(s: Stats | null): Fact[] {
   if (!s) return [["—", "prompts", "dim"], ["—", "longest streak", "dim"], ["—", "God prompts", "dim"], ["—", "longest unattended run", "dim"], ["—", "words written", "dim"]];
   const [sv, sl] = spotlight(s);
@@ -338,7 +347,7 @@ function factRows(s: Stats | null): Fact[] {
     [`${s.longestStreak} days`, "longest streak"],
     [short(s.godPrompts), "God prompts", "g"],
     [`${s.longestUnattendedH} h`, "longest unattended run"],
-    [sv, sl, isNight(main) ? "n" : undefined],
+    [sv, sl, (toneClass(toneOf(main)) || undefined) as Fact[2]],
   ];
   if (s.machines.length > 1) rows.push([String(s.machines.length), "machines"]);
   return rows;
@@ -356,7 +365,8 @@ function renderByMonth(src: Metrics | null): void {
   const m = src && yearWindow(src);
   const def = byKey(main);
   const bars = $("bars");
-  bars.toggleAttribute("data-night", isNight(main));
+  const bt = toneOf(main);
+  if (bt) bars.dataset.tone = bt; else delete bars.dataset.tone;
   $("trendH").textContent = `${def.label} by month`;
   if (!m) {
     const now = new Date();
@@ -431,6 +441,10 @@ function renderMore(s: Stats): void {
       [n(s.afterMidnight), "prompts after midnight"], [`${s.medianDaySpanHours} h`, "median day, first to last"], [n(s.please), "times you said please"],
     ]),
   ];
+  groups.push(group("Mood", [
+    [n(s.swearing ?? 0), "swears"], [n(s.annoyed ?? 0), "times annoyed"], [n(s.capsRage ?? 0), "caps-lock moments"],
+    [n(s.sorry), "apologies to a machine"], [n(s.ultrathink ?? 0), "ultrathinks"], [n(s.goAhead ?? 0), "go-aheads"],
+  ]));
   if (s.tokens) {
     const t = s.tokens;
     const M = (x: number) => (x >= 1e9 ? `${(x / 1e9).toFixed(1)}B` : `${(x / 1e6).toFixed(1)}M`);
@@ -443,7 +457,106 @@ function renderMore(s: Stats): void {
       "From session transcripts. Claude Code prunes those after a while, so only a recent window survives — this is a fixed 30 days, not the year."));
   }
   $("groups").replaceChildren(...groups);
-  $("moreHint").textContent = s.tokens ? "writing, delegating, tokens" : "writing, delegating";
+  $("moreHint").textContent = s.tokens ? "writing, delegating, mood, tokens" : "writing, delegating, mood";
+}
+
+/* ---------- things you said ---------- */
+
+const QUOTE_TONE: Record<string, Tone> = { swearing: "heat", annoyed: "heat", caps: "heat", thanks: "warm" };
+const QUOTE_LABEL: Record<string, string> = { swearing: "swearing", annoyed: "annoyed", caps: "caps lock", thanks: "thanks", sorry: "sorry", banter: "banter", ultrathink: "ultrathink", goAhead: "go ahead" };
+
+function renderQuotes(m: Metrics): void {
+  const box = $("quotes");
+  const qs = m.quotes ?? [];
+  box.classList.toggle("hidden", !qs.length);
+  if (!qs.length) return;
+  $("qgrid").replaceChildren(...qs.map((q) => {
+    const d = el("div", "quote");
+    d.append(el("p", undefined, q.t));
+    const meta = el("div", "qm");
+    const tag = el("span", "tag", QUOTE_LABEL[q.c] ?? q.c);
+    const tone = QUOTE_TONE[q.c];
+    if (tone) tag.dataset.tone = tone;
+    meta.append(tag, el("span", undefined, new Date(`${q.d}T12:00:00`).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })));
+    d.append(meta);
+    return d;
+  }));
+}
+
+function wrapText(ctx: CanvasRenderingContext2D, text: string, max: number): string[] {
+  const words = text.split(" ");
+  const lines: string[] = [];
+  let line = "";
+  for (const w of words) {
+    const next = line ? `${line} ${w}` : w;
+    if (ctx.measureText(next).width > max && line) { lines.push(line); line = w; } else line = next;
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
+function drawQuoteCard(): HTMLCanvasElement {
+  const canvas = $<HTMLCanvasElement>("qcanvas");
+  const ctx = canvas.getContext("2d")!;
+  const W = 1200, H = 630;
+  ctx.save();
+  ctx.scale(2, 2);
+  ctx.fillStyle = CSS("--bg");
+  ctx.fillRect(0, 0, W, H);
+  const sans = `system-ui,-apple-system,"Segoe UI",sans-serif`;
+  const mono = CSS("--mono");
+
+  ctx.fillStyle = CSS("--ink");
+  ctx.font = `700 36px ${sans}`;
+  ctx.fillText("Things I said to Claude", 60, 74);
+  ctx.fillStyle = CSS("--mute");
+  ctx.font = `400 17px ${sans}`;
+  ctx.fillText("A year of prompting, unfiltered", 60, 102);
+  ctx.textAlign = "right";
+  ctx.fillStyle = CSS("--ink");
+  ctx.font = `500 19px ${mono}`;
+  ctx.fillText("npx promptstreak", W - 60, 74);
+  ctx.fillStyle = CSS("--mute");
+  ctx.font = `400 17px ${sans}`;
+  ctx.fillText("to get yours", W - 60, 102);
+  ctx.textAlign = "left";
+
+  // Fill the card top-down in ranking order, skipping quotes that don't fit;
+  // shrink type only when fewer than five make it in.
+  const all = metrics?.quotes ?? [];
+  const LH = 1.3, TAG_GAP = 26, NEXT_GAP = 46, TOP = 156, BOTTOM = H - 44;
+  let size = 24, qs: typeof all = [], blocks: string[][] = [];
+  for (; size >= 16; size -= 2) {
+    ctx.font = `500 ${size}px ${sans}`;
+    qs = []; blocks = [];
+    let y = TOP;
+    for (const q of all) {
+      const lines = wrapText(ctx, `\u201c${q.t}\u201d`, W - 120);
+      const h = (lines.length - 1) * size * LH + TAG_GAP;
+      if (y + h > BOTTOM) continue;
+      qs.push(q); blocks.push(lines);
+      y += h + NEXT_GAP;
+    }
+    if (qs.length >= Math.min(5, all.length)) break;
+  }
+  let y = TOP;
+  qs.forEach((q, i) => {
+    ctx.fillStyle = CSS("--ink");
+    ctx.font = `500 ${size}px ${sans}`;
+    blocks[i].forEach((line, j) => ctx.fillText(line, 60, y + j * size * LH));
+    const ty = y + (blocks[i].length - 1) * size * LH + TAG_GAP;
+    const tone = QUOTE_TONE[q.c];
+    const label = (QUOTE_LABEL[q.c] ?? q.c).toUpperCase();
+    ctx.fillStyle = CSS(tone === "heat" ? "--h4" : tone === "warm" ? "--w4" : "--faint");
+    ctx.font = `600 12px ${sans}`;
+    ctx.fillText(label, 60, ty);
+    ctx.fillStyle = CSS("--faint");
+    ctx.font = `400 13px ${sans}`;
+    ctx.fillText(new Date(`${q.d}T12:00:00`).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }), 60 + ctx.measureText(label).width + 14, ty);
+    y = ty + NEXT_GAP;
+  });
+  ctx.restore();
+  return canvas;
 }
 
 /* ---------- machines ---------- */
@@ -525,7 +638,8 @@ function drawCard(): HTMLCanvasElement {
   const sans = `system-ui,-apple-system,"Segoe UI",sans-serif`;
   const mono = CSS("--mono");
   const def = byKey(main);
-  const night = isNight(main);
+  const tone = toneOf(main);
+  const ovTone = toneOf(overlay);
   {
     // Everything below is laid out from the top; shift it so the block sits centred.
     const colsN = columns(m.days).length;
@@ -534,15 +648,16 @@ function drawCard(): HTMLCanvasElement {
     const bottom = 166 + 7 * (cell + gap) + 70 + 30;
     ctx.translate(0, Math.max(0, Math.floor((H - bottom - 50) / 2)));
   }
-  const ovNight = isNight(overlay);
-  const ramp = night ? ["--empty", "--n1", "--n2", "--n3", "--n4"] : ["--empty", "--g1", "--g2", "--g3", "--g4"];
+  const rampFor = (t: Tone) => t === "night" ? ["--empty", "--n1", "--n2", "--n3", "--n4"] : t === "heat" ? ["--empty", "--h1", "--h2", "--h3", "--h4"] : t === "warm" ? ["--empty", "--w1", "--w2", "--w3", "--w4"] : ["--empty", "--g1", "--g2", "--g3", "--g4"];
+  const ramp = rampFor(tone);
+  const ovRamp = rampFor(ovTone);
 
   ctx.fillStyle = CSS("--ink");
   ctx.font = `700 36px ${sans}`;
   ctx.fillText(def.label, 60, 74);
   if (overlay) {
     const x = 60 + ctx.measureText(def.label).width + 14;
-    ctx.fillStyle = CSS(ovNight ? "--n4" : "--gold");
+    ctx.fillStyle = CSS(ovTone ? ovRamp[4] : "--gold");
     ctx.font = `600 22px ${sans}`;
     ctx.fillText(`+ ${byKey(overlay).label}`, x, 74);
   }
@@ -587,7 +702,7 @@ function drawCard(): HTMLCanvasElement {
       const odd = new Date(`${day}T12:00:00`).getMonth() % 2 === 1;
       const lv = level(values[i] ?? 0);
       ctx.fillStyle = ov > 0
-        ? CSS(ovNight ? (ov > 2 ? "--n4" : "--n3") : (ov > 2 ? "--gold" : "--gold2"))
+        ? CSS(ovTone ? (ov > 2 ? ovRamp[4] : ovRamp[3]) : (ov > 2 ? "--gold" : "--gold2"))
         : lv === 0 && odd ? CSS("--empty2") : CSS(ramp[lv]);
       ctx.beginPath();
       ctx.roundRect(cx, y0 + ri * step, cell, cell, 2);
@@ -607,9 +722,9 @@ function drawCard(): HTMLCanvasElement {
   const facts = factRows(s);
   const slot = (W - 120) / facts.length;
   ctx.textAlign = "center";
-  facts.forEach(([v, l, tone], i) => {
+  facts.forEach(([v, l, ft], i) => {
     const fx = 60 + slot * (i + 0.5);
-    ctx.fillStyle = CSS(tone === "g" ? "--gold" : tone === "n" ? "--n4" : "--ink");
+    ctx.fillStyle = CSS(ft === "g" ? "--gold" : ft === "n" ? "--n4" : ft === "h" ? "--h4" : ft === "w" ? "--w4" : "--ink");
     ctx.font = `600 25px ${mono}`;
     ctx.fillText(v, fx, fy);
     ctx.fillStyle = CSS("--mute");
@@ -632,6 +747,7 @@ function render(animate = false): void {
   renderPickers();
   renderCalendar(metrics, animate);
   renderFacts(metrics.stats);
+  renderQuotes(metrics);
   renderByMonth(metrics);
   renderMore(metrics.stats);
   void encode(metrics, metrics.stats.machines[0]).then((p) => history.replaceState(null, "", `${location.pathname}#${p}`));
@@ -645,6 +761,7 @@ function renderEmpty(): void {
   $("icons").classList.add("hidden");
   $("ddOver").classList.add("hidden");
   $("more").classList.add("hidden");
+  $("quotes").classList.add("hidden");
   const to = new Date();
   const from = new Date(to);
   from.setDate(from.getDate() - 364);
@@ -730,6 +847,17 @@ async function boot(): Promise<void> {
     const a = document.createElement("a");
     a.href = url;
     a.download = `promptstreak-${main}${overlay ? `+${overlay}` : ""}.png`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast("PNG saved");
+  }, "image/png");
+
+  $("qpng").onclick = () => drawQuoteCard().toBlob((b) => {
+    if (!b) return;
+    const url = URL.createObjectURL(b);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "promptstreak-quotes.png";
     a.click();
     URL.revokeObjectURL(url);
     toast("PNG saved");

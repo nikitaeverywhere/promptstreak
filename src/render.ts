@@ -21,6 +21,10 @@ export const METRIC_LABELS: Record<MetricKey, string> = {
   overnight: "Overnight deliveries",
   nightOwl: "Night prompts (22:00-05:00)",
   politeness: '"Please" prompts',
+  swearing: "Swearing",
+  annoyed: "Annoyed",
+  caps: "Caps lock",
+  thanks: "Thanks & praise",
 };
 
 /** Sunday-first weeks, exactly like GitHub, so the shape reads instantly. */
@@ -110,7 +114,14 @@ export function renderStats(m: Metrics): string {
     `  Longest streak ${C.bold}${s.longestStreak} days${C.reset}${s.longestStreakEnd ? ` ${C.dim}(ended ${s.longestStreakEnd})${C.reset}` : ""}${s.currentStreak ? ` · current ${s.currentStreak}` : ""}`,
     `  ${n(s.afterMidnight)} prompts after midnight ${C.dim}· median ${s.medianDaySpanHours} h/day between first and last prompt${C.reset}`,
     `  ${s.please} "please", ${s.thanks} "thanks", ${s.sorry} "sorry"`,
+    `  ${C.bold}${s.swearing}${C.reset} swears ${C.dim}·${C.reset} ${s.annoyed} annoyed ${C.dim}·${C.reset} ${s.capsRage} in CAPS ${C.dim}·${C.reset} ${s.ultrathink} ultrathinks ${C.dim}·${C.reset} ${s.goAhead} go-aheads`,
   ].join("\n");
+}
+
+export function renderQuotes(m: Metrics): string {
+  if (!m.quotes?.length) return "";
+  const lines = m.quotes.map((q) => `  ${C.dim}${q.c.padEnd(10)}${C.reset} "${q.t.length > 110 ? q.t.slice(0, 107) + "…" : q.t}"`);
+  return [`${C.bold}Things you said${C.reset} ${C.dim}(these travel with the link — --no-quotes to keep them here)${C.reset}`, ...lines].join("\n");
 }
 
 export function renderLegend(metric: MetricKey): string {

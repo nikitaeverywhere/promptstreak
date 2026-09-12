@@ -1,4 +1,5 @@
-import type { Archetype, MetricKey, Metrics, PromptEvent, Stats, TokenStats } from "./types.js";
+import type { Archetype, MetricKey, Metrics, PromptEvent, Quote, Stats, TokenStats } from "./types.js";
+import { asCandidate, moodScores, pickQuotes, type QuoteCandidate } from "./mood.js";
 
 /** A prompt this long is a spec, not a message. Fixed so any two people compare. */
 export const GOD_PROMPT_CHARS = 5000;
@@ -20,6 +21,7 @@ const SPEC_SHAPED = /(^|\n)\s*([-*]|\d+[.)])\s+/;
 const PLEASE = /\bplease\b/i;
 const THANKS = /\bthanks?\b|\bthank you\b/i;
 const SORRY = /\bsorry\b/i;
+const THANKS_WORD = /\bthanks?\b|\bthank you\b/i;
 
 /** Local calendar day, `YYYY-MM-DD`. Never UTC — a night owl's day must not split. */
 export const dayOf = (ts: number): string => new Date(ts).toLocaleDateString("en-CA");
@@ -84,6 +86,8 @@ export interface ComputeOptions {
    * sleeping, so this wins whenever transcripts are available.
    */
   provenRun?: { hours: number; day: string };
+  /** Skip quote selection entirely (nothing quotable travels). */
+  noQuotes?: boolean;
 }
 
 export function computeMetrics(events: PromptEvent[], opts: ComputeOptions = {}): Metrics {
@@ -108,6 +112,10 @@ export function computeMetrics(events: PromptEvent[], opts: ComputeOptions = {})
     overnight: zeros(),
     nightOwl: zeros(),
     politeness: zeros(),
+    swearing: zeros(),
+    annoyed: zeros(),
+    caps: zeros(),
+    thanks: zeros(),
   };
 
   const aux = { leashN: zeros(), typed: zeros() };
@@ -122,6 +130,8 @@ export function computeMetrics(events: PromptEvent[], opts: ComputeOptions = {})
   let please = 0;
   let thanks = 0;
   let sorry = 0;
+  const mood = { swearing: 0, annoyed: 0, capsRage: 0, banter: 0, ultrathink: 0, goAhead: 0 };
+  const cands: QuoteCandidate[] = [];
   let maxLength = 0;
   let maxLengthDay = from;
 
@@ -159,8 +169,21 @@ export function computeMetrics(events: PromptEvent[], opts: ComputeOptions = {})
       series.politeness[i]++;
       please++;
     }
-    if (THANKS.test(text)) thanks++;
+    if (THANKS_WORD.test(text)) thanks++;
     if (SORRY.test(text)) sorry++;
+
+    const ms = moodScores(text);
+    if (ms.swearing > 0) { series.swearing[i]++; mood.swearing++; }
+    if (ms.annoyed > 0) { series.annoyed[i]++; mood.annoyed++; }
+    if (ms.caps > 0) { series.caps[i]++; mood.capsRage++; }
+    if (ms.thanks > 0) series.thanks[i]++;
+    if (ms.banter > 0) mood.banter++;
+    if (ms.ultrathink > 0) mood.ultrathink++;
+    if (ms.goAhead > 0) mood.goAhead++;
+    if (!opts.noQuotes) {
+      const c = asCandidate(text, e.ts, day);
+      if (c) cands.push(c);
+    }
     if (text.length > maxLength) {
       maxLength = text.length;
       maxLengthDay = day;
@@ -269,12 +292,19 @@ export function computeMetrics(events: PromptEvent[], opts: ComputeOptions = {})
     please,
     thanks,
     sorry,
+    swearing: mood.swearing,
+    annoyed: mood.annoyed,
+    capsRage: mood.capsRage,
+    banter: mood.banter,
+    ultrathink: mood.ultrathink,
+    goAhead: mood.goAhead,
     topNudges: [...nudgeCounts].sort((a, b) => b[1] - a[1]).slice(0, 10),
     machines: opts.machines ?? [],
     ...(opts.tokens ? { tokens: opts.tokens } : {}),
   };
 
-  return { from, to, days, series, aux, stats };
+  const quotes: Quote[] | undefined = opts.noQuotes ? undefined : pickQuotes(cands);
+  return { from, to, days, series, aux, stats, ...(quotes ? { quotes } : {}) };
 }
 
 function streaks(days: string[], active: Set<string>, to: string) {

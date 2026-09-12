@@ -6,7 +6,8 @@ import { findJsonl, merge, parseHistory, parsePath } from "./parse.js";
 import { scanTranscripts } from "./transcripts.js";
 import { computeMetrics } from "./metrics.js";
 import { encode } from "./codec.js";
-import { METRIC_LABELS, renderGrid, renderLegend, renderStats } from "./render.js";
+import { METRIC_LABELS, renderGrid, renderLegend, renderQuotes, renderStats } from "./render.js";
+import { curateQuotes } from "./curate.js";
 import type { MetricKey, PromptEvent } from "./types.js";
 
 const WEB_URL = process.env.PROMPTSTREAK_URL ?? "https://promptstreak.pages.dev";
@@ -21,6 +22,8 @@ promptstreak — your Claude Code prompting habits as a contribution graph
   npx promptstreak --no-open             just the terminal output
   npx promptstreak --json                raw metrics as JSON
   npx promptstreak --local               skip transcripts, use history.jsonl only
+  npx promptstreak --no-quotes           don't include quotable lines in the link
+  npx promptstreak --curate              ask Claude Code to pick the funniest quotes
 
 Metrics: ${Object.keys(METRIC_LABELS).join(", ")}
 
@@ -110,8 +113,17 @@ async function main(): Promise<void> {
   const machine = hostname().replace(/\.local$/, "");
   const metrics = computeMetrics(events, {
     machines: [machine],
+    noQuotes: flag("--no-quotes"),
     ...(scan ? { tokens: scan.tokens, provenRun: { hours: scan.longestRunH, day: scan.longestRunDay } } : {}),
   });
+
+  if (flag("--curate") && metrics.quotes?.length) {
+    status("Asking Claude Code to pick the best lines…");
+    const curated = await curateQuotes(events, metrics.quotes);
+    statusDone();
+    if (curated) metrics.quotes = curated;
+    else console.error("Could not curate (is `claude` on your PATH?). Keeping the ranked picks.");
+  }
 
   if (flag("--json")) {
     console.log(JSON.stringify(metrics, null, 2));
@@ -121,6 +133,8 @@ async function main(): Promise<void> {
   console.log(`\n${renderStats(metrics)}\n`);
   console.log(renderGrid(metrics, metric));
   console.log(`\n${renderLegend(metric)}\n`);
+  const q = renderQuotes(metrics);
+  if (q) console.log(`${q}\n`);
 
   const url = `${WEB_URL}/#${await encode(metrics, machine)}`;
   if (flag("--print-url")) {

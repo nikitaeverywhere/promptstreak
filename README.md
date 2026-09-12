@@ -43,6 +43,8 @@ npx promptstreak --print-url              # print the share link instead of open
 npx promptstreak --no-open                # terminal only
 npx promptstreak --json                   # raw metrics, for scripting
 npx promptstreak --local                  # history.jsonl only, skip transcripts
+npx promptstreak --no-quotes              # keep "Things you said" out of the link
+npx promptstreak --curate                 # let your local `claude` pick the quotes
 ```
 
 ### More than one machine
@@ -56,6 +58,14 @@ npx promptstreak box.jsonl
 
 Any number of files or directories can be passed, and duplicates are dropped. The web page takes
 dropped files the same way.
+
+### Things you said
+
+The run ends with up to ten of your own lines — the swearing, the caps lock, the apologies — and
+they travel with the link so the page can show them. They are redacted first (links, paths, emails
+and anything token-shaped are stripped) and printed in the terminal before the browser opens, so
+you see exactly what ships. `--no-quotes` keeps them home. `--curate` hands the top candidates to
+your local `claude` CLI to pick the funniest, and uses the built-in ranking if that fails.
 
 ## Where the numbers come from
 
@@ -75,20 +85,23 @@ merged rather than the first one winning.
 
 ## Privacy
 
-Nothing you typed ever leaves your machine — not from the CLI, not from the page.
+Nothing you typed leaves your machine unless you let it. The one thing that can is the quotes,
+and you see them before they go.
 
 - **`npx promptstreak`** reads `~/.claude/history.jsonl` and the session transcripts on disk,
   counts them locally, and prints the result. Its only network action is opening a browser tab;
   it sends no telemetry and calls no API.
-- **The link it opens** carries view data only, never the source — per-day counts and headline
-  numbers, compressed into the URL **fragment**, which browsers never send to a server. Prompt
-  text, file paths and project names are not in it.
+- **The link it opens** carries view data, never the source — per-day counts, headline numbers
+  and, unless you pass `--no-quotes`, the redacted quotes printed in the terminal — compressed
+  into the URL **fragment**, which browsers never send to a server. File paths and project names
+  are not in it.
 - **The page** is static: no backend, no upload endpoint. Dropped files are parsed in the
   browser and stay there. Saved machines live in your browser's local storage. Google Analytics
   counts visits; it is configured to receive the page address without the fragment, so the share
   data never reaches it.
 
-Read the parser if you want to check: `src/parse-core.ts` is the whole of what is extracted.
+Read the source if you want to check: `src/parse-core.ts` is the whole of what is extracted, and
+`src/mood.ts` is everything that touches prompt text.
 
 ## Development
 
