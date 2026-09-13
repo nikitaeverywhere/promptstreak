@@ -27,6 +27,7 @@
     --w1:#0f3f3a;--w2:#0f766e;--w3:#14b8a6;--w4:#5eead4;
     --gold:#ffd34d;--gold2:#c99a20;
     --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+    --serif:Georgia,"Times New Roman",serif;
     --ease:cubic-bezier(.22,.61,.36,1);--cs:12px;--cg:3px;
   }
   *{box-sizing:border-box}
@@ -101,25 +102,21 @@
   .cols{display:flex;gap:var(--cg);position:relative}
   .col{display:grid;grid-template-rows:repeat(7,var(--cs));gap:var(--cg);width:var(--cs)}
   .ml{position:absolute;background:var(--line2);pointer-events:none}
-  .cell{width:var(--cs);height:var(--cs);border-radius:2px;background:var(--empty);position:relative;
+  /* Each cell carries its base colour in --bc; an overlay lays the accent --oc over it at --oa opacity. */
+  .cell{--bc:var(--empty);width:var(--cs);height:var(--cs);border-radius:2px;background:var(--bc);position:relative;
     transition:background .3s var(--ease),transform .1s var(--ease);animation:pop .35s var(--ease) backwards}
-  .cell[data-odd][data-l="0"]{background:var(--empty2)}
-  .cell[data-l="1"]{background:var(--g1)}.cell[data-l="2"]{background:var(--g2)}
-  .cell[data-l="3"]{background:var(--g3)}.cell[data-l="4"]{background:var(--g4)}
-  .cal[data-tone="night"] .cell[data-l="1"]{background:var(--n1)}.cal[data-tone="night"] .cell[data-l="2"]{background:var(--n2)}
-  .cal[data-tone="night"] .cell[data-l="3"]{background:var(--n3)}.cal[data-tone="night"] .cell[data-l="4"]{background:var(--n4)}
-  .cal[data-tone="heat"] .cell[data-l="1"]{background:var(--h1)}.cal[data-tone="heat"] .cell[data-l="2"]{background:var(--h2)}
-  .cal[data-tone="heat"] .cell[data-l="3"]{background:var(--h3)}.cal[data-tone="heat"] .cell[data-l="4"]{background:var(--h4)}
-  .cal[data-tone="warm"] .cell[data-l="1"]{background:var(--w1)}.cal[data-tone="warm"] .cell[data-l="2"]{background:var(--w2)}
-  .cal[data-tone="warm"] .cell[data-l="3"]{background:var(--w3)}.cal[data-tone="warm"] .cell[data-l="4"]{background:var(--w4)}
-  .cell[data-l][data-ov="1"]{background:var(--gold2)}
-  .cell[data-l][data-ov="2"]{background:var(--gold);box-shadow:0 0 6px rgba(255,211,77,.45)}
-  .cal[data-ovtone="night"] .cell[data-l][data-ov="1"]{background:var(--n3);box-shadow:none}
-  .cal[data-ovtone="night"] .cell[data-l][data-ov="2"]{background:var(--n4);box-shadow:0 0 6px rgba(167,139,250,.45)}
-  .cal[data-ovtone="heat"] .cell[data-l][data-ov="1"]{background:var(--h3);box-shadow:none}
-  .cal[data-ovtone="heat"] .cell[data-l][data-ov="2"]{background:var(--h4);box-shadow:0 0 6px rgba(251,146,60,.45)}
-  .cal[data-ovtone="warm"] .cell[data-l][data-ov="1"]{background:var(--w3);box-shadow:none}
-  .cal[data-ovtone="warm"] .cell[data-l][data-ov="2"]{background:var(--w4);box-shadow:0 0 6px rgba(94,234,212,.45)}
+  .cell[data-odd][data-l="0"]{--bc:var(--empty2)}
+  .cell[data-l="1"]{--bc:var(--g1)}.cell[data-l="2"]{--bc:var(--g2)}
+  .cell[data-l="3"]{--bc:var(--g3)}.cell[data-l="4"]{--bc:var(--g4)}
+  .cal[data-tone="night"] .cell[data-l="1"]{--bc:var(--n1)}.cal[data-tone="night"] .cell[data-l="2"]{--bc:var(--n2)}
+  .cal[data-tone="night"] .cell[data-l="3"]{--bc:var(--n3)}.cal[data-tone="night"] .cell[data-l="4"]{--bc:var(--n4)}
+  .cal[data-tone="heat"] .cell[data-l="1"]{--bc:var(--h1)}.cal[data-tone="heat"] .cell[data-l="2"]{--bc:var(--h2)}
+  .cal[data-tone="heat"] .cell[data-l="3"]{--bc:var(--h3)}.cal[data-tone="heat"] .cell[data-l="4"]{--bc:var(--h4)}
+  .cal[data-tone="warm"] .cell[data-l="1"]{--bc:var(--w1)}.cal[data-tone="warm"] .cell[data-l="2"]{--bc:var(--w2)}
+  .cal[data-tone="warm"] .cell[data-l="3"]{--bc:var(--w3)}.cal[data-tone="warm"] .cell[data-l="4"]{--bc:var(--w4)}
+  .cal{--oc:var(--gold)} .cal[data-ovtone="night"]{--oc:var(--n4)} .cal[data-ovtone="heat"]{--oc:var(--h4)} .cal[data-ovtone="warm"]{--oc:var(--w4)}
+  .cell[data-ov]{--oa:1;background:color-mix(in srgb,var(--oc) calc(var(--oa)*100%),var(--bc))}
+  .cell[data-ov="max"]{box-shadow:0 0 6px color-mix(in srgb,var(--oc) 45%,transparent)}
   .cell[data-void]{background:transparent}
   .cell[data-day]:hover{transform:scale(1.35);z-index:5}
   @keyframes pop{from{opacity:0;transform:scale(.5)}to{opacity:1;transform:none}}
@@ -144,14 +141,26 @@
   .quotes{margin-top:16px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 24px 20px}
   .quotes .qh{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
   .quotes h2{margin:0;font-size:16px}
-  .qgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 28px}
-  .quote{padding:10px 0;display:flex;flex-direction:column;gap:6px;min-width:0}
-  .quote p{margin:0;font-size:16px;line-height:1.45;color:var(--ink);overflow-wrap:anywhere}
-  .quote p::before{content:"“";color:var(--faint)} .quote p::after{content:"”";color:var(--faint)}
-  .quote .qm{display:flex;gap:8px;align-items:center;font-size:12px;color:var(--faint)}
-  .quote .tag{padding:2px 8px;border-radius:999px;border:1px solid var(--line2);color:var(--mute);font-weight:500}
-  .quote .tag[data-tone="heat"]{color:var(--h4);border-color:#5a2a15}
-  .quote .tag[data-tone="warm"]{color:var(--w4);border-color:#144d47}
+  .qh .qacts{display:flex;gap:8px}
+  .qgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 32px}
+  .quote{position:relative;padding:12px 0 10px 36px;display:flex;flex-direction:column;gap:6px;min-width:0}
+  .quote .qmark{position:absolute;left:0;top:6px;font:italic 700 48px/1 var(--serif);color:var(--faint);pointer-events:none;user-select:none}
+  .quote .qmark[data-tone="heat"]{color:var(--h4)} .quote .qmark[data-tone="warm"]{color:var(--w4)}
+  .quote p{margin:0;font-size:17px;line-height:1.5;color:var(--ink);font-style:italic;overflow-wrap:anywhere}
+  .quote .qm{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:12.5px;color:var(--faint);min-height:26px}
+  .quote .qa{display:flex;gap:4px;opacity:0;transition:opacity .15s var(--ease)}
+  .quote:hover .qa,.quote:focus-within .qa{opacity:1}
+  @media (hover:none){.quote .qa{opacity:1}}
+  .qa .ico{width:26px;height:26px;border-radius:7px;border-color:transparent}
+  .qa .ico:hover{border-color:var(--line2);background:var(--panel2)}
+  .qa .ico svg{width:14px;height:14px}
+  .sp{background:var(--line2);color:transparent;border-radius:4px;user-select:none;font-style:normal}
+  ::selection{background:color-mix(in srgb,var(--g4) 35%,transparent)}
+  .qempty{margin:0;font-size:14px;color:var(--faint)}
+  #hidebtn{position:fixed;transform:translate(-50%,-100%);display:inline-flex;align-items:center;gap:6px;background:#05070a;border:1px solid var(--line2);
+    color:var(--ink);border-radius:8px;padding:5px 10px;font:500 13px/1 inherit;font-family:inherit;z-index:96;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.35)}
+  #hidebtn:hover{border-color:var(--faint)}
+  #hidebtn svg{width:14px;height:14px}
   @media (max-width:720px){.qgrid{grid-template-columns:1fr}.quotes{padding:16px 14px}}
 
   /* below the card */
@@ -205,8 +214,10 @@
   footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);font-size:13.5px;color:var(--faint);line-height:1.7;text-align:center}
   footer a{color:var(--mute)}
   .toast{position:fixed;left:50%;bottom:28px;transform:translate(-50%,8px);background:#05070a;border:1px solid var(--line2);color:var(--ink);
-    padding:8px 14px;border-radius:9px;font-size:14px;opacity:0;transition:.18s var(--ease);pointer-events:none;z-index:95}
-  .toast[data-show]{opacity:1;transform:translate(-50%,0)}
+    padding:8px 14px;border-radius:9px;font-size:14px;opacity:0;transition:.18s var(--ease);pointer-events:none;z-index:95;white-space:nowrap}
+  .toast[data-show]{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+  .toast .tb{margin-left:14px;padding:0;background:none;border:0;color:var(--g4);font:600 14px inherit;font-family:inherit;cursor:pointer}
+  .toast .tb:hover{text-decoration:underline}
   canvas#canvas{display:none}
 
   @media (max-width:720px){
@@ -261,7 +272,10 @@
 
   <div class="quotes hidden" id="quotes">
     <div class="qh"><h2>Things you said</h2>
+      <div class="qacts">
+      <button class="ico hidden" id="qreset" data-tip="Bring back hidden text and removed quotes" aria-label="Bring back hidden text and removed quotes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg></button>
       <button class="ico" id="qpng" data-tip="Download quotes as PNG" aria-label="Download quotes as PNG"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg></button>
+      </div>
     </div>
     <div class="qgrid" id="qgrid"></div>
   </div>
@@ -296,9 +310,10 @@
   </footer>
 </div>
 <div id="tip"></div>
+<button id="hidebtn" class="hidden" type="button" aria-label="Hide the selected text"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>Hide</button>
 <div class="toast" id="toast"></div>
 <canvas id="canvas" width="2400" height="1260"></canvas>
 <canvas id="qcanvas" width="2400" height="1260" style="display:none"></canvas>
-<script type="module" src="./app.js?v=fc7504dc04"></script>
+<script type="module" src="./app.js?v=23e9b64ea4"></script>
 </body>
 </html>

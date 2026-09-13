@@ -79,3 +79,15 @@ test("pickQuotes drops repeats and near-repeats", () => {
   assert.equal(qs.length, 1);
   assert.equal(qs[0].d, "2026-01-03"); // equal scores: the most recent wins
 });
+
+test("spoil blanks a run without spelling out its length", async () => {
+  const { spoil } = await import("../src/web-quotes.js");
+  const t = "Because you fucking dumb asshole stashed changes";
+  const s = spoil(t, 12, 32);
+  assert.equal(s, "Because you ███████ stashed changes");
+  // Hiding next to an existing run merges into one longer run.
+  assert.equal(spoil(s, 8, 12), "Because ██████████ stashed changes");
+  // Long or repeated hides never grow past the cap.
+  assert.equal(spoil("x".repeat(120), 0, 120), "█".repeat(12));
+  assert.equal(spoil("ab", 0, 2), "███");
+});

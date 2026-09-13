@@ -161,5 +161,5 @@ function paint(): void {
     if (cell) cell.dataset.l = String(i === 0 ? 4 : Math.max(1, 3 - Math.floor(i / 6)));
   });
   const food = s.cells[s.food[0]]?.[s.food[1]];
-  if (food) food.dataset.ov = "2";
+  if (food) food.dataset.ov = "max";
 }

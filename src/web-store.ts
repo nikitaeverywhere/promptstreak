@@ -34,8 +34,13 @@ export function save(list: Snapshot[]): void {
 /** One snapshot per machine; re-running the CLI replaces, never piles up. */
 const sameMachine = (a: string, b: string) => a.replace(/\.local$/, "") === b.replace(/\.local$/, "");
 
+const machineOf = (payload: Payload) => (payload.label || payload.stats.machines[0] || "this machine").replace(/\.local$/, "");
+
+/** True when a snapshot for this payload's machine is already stored. */
+export const holds = (payload: Payload): boolean => load().some((s) => sameMachine(s.machine, machineOf(payload)));
+
 export function upsert(payload: Payload): Snapshot[] {
-  const machine = (payload.label || payload.stats.machines[0] || "this machine").replace(/\.local$/, "");
+  const machine = machineOf(payload);
   const list = load().filter((s) => !sameMachine(s.machine, machine));
   list.push({ ...payload, id: `${machine}:${Date.now()}`, machine, savedAt: Date.now(), on: true });
   list.sort((a, b) => b.savedAt - a.savedAt);

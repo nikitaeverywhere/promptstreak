@@ -67,6 +67,10 @@ and anything token-shaped are stripped) and printed in the terminal before the b
 you see exactly what ships. `--no-quotes` keeps them home. `--curate` hands the top candidates to
 your local `claude` CLI to pick the funniest, and uses the built-in ranking if that fails.
 
+On the page, select any words in a quote to blank them out, or remove a quote you would rather not
+show; the link in the address bar updates as you go, so what you share is what you see. Only your
+browser keeps the originals, so only there can they be undone or restored.
+
 ## Where the numbers come from
 
 Two files, with very different reach:

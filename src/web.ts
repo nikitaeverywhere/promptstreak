@@ -2,8 +2,9 @@ import { decode, encode } from "./codec.js";
 import { merge, parseUnknownText } from "./parse-core.js";
 import { computeMetrics } from "./metrics.js";
 import { METRICS, byKey, type MetricDef } from "./web-metrics.js";
-import { combine, daysBetween, expand, load, save, upsert, type Snapshot } from "./web-store.js";
-import type { MetricKey, Metrics, Stats } from "./types.js";
+import { combine, daysBetween, expand, holds, load, save, upsert, type Snapshot } from "./web-store.js";
+import type { MetricKey, Metrics, Quote, Stats } from "./types.js";
+import { applyEdits, hasEdits, hideRange, parts, removeQuote, resetEdits, undo, type Shown } from "./web-quotes.js";
 import { startSnake, stopSnake } from "./web-snake.js";
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -41,6 +42,24 @@ function levels(values: number[]): (v: number) => 0 | 1 | 2 | 3 | 4 {
   const q = (p: number) => nz[Math.min(nz.length - 1, Math.floor(nz.length * p))];
   const [a, b, c] = [q(0.25), q(0.5), q(0.75)];
   return (v) => (v <= 0 ? 0 : v <= a ? 1 : v <= b ? 2 : v <= c ? 3 : 4);
+}
+
+/**
+ * Overlay strength as a share of the accent colour laid over the base cell:
+ * the busiest day is the pure accent, everything else fades toward the base.
+ * Square-root so a single event on a heavy-tailed metric still shows.
+ */
+function overlayAlpha(values: number[] | null): (v: number) => number {
+  const max = values ? Math.max(0, ...values) : 0;
+  if (!max) return () => 0;
+  return (v) => (v <= 0 ? 0 : Math.min(1, 0.3 + 0.7 * Math.sqrt(v / max)));
+}
+
+/** Mix two #rrggbb colours: `a` of the first over the second. */
+function hexMix(top: string, base: string, a: number): string {
+  const c = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  const [t, b] = [c(top), c(base)];
+  return `rgb(${t.map((v, i) => Math.round(v * a + b[i] * (1 - a))).join(",")})`;
 }
 
 /** Sunday-first columns with a leading pad, exactly like GitHub. */
@@ -123,6 +142,7 @@ function renderCalendar(src: Metrics, animate: boolean): (HTMLElement | null)[][
   const values = m.series[main];
   const level = levels(values);
   const over = overlay ? m.series[overlay] : null;
+  const ovAlpha = overlayAlpha(over);
   const cols = columns(m.days);
   const at = new Map(m.days.map((d, i) => [d, i]));
   const cs = cellSize(cols.length);
@@ -161,7 +181,11 @@ function renderCalendar(src: Metrics, animate: boolean): (HTMLElement | null)[][
         const i = at.get(day)!;
         const ov = over?.[i] ?? 0;
         cell.dataset.l = String(level(values[i] ?? 0));
-        if (ov > 0) cell.dataset.ov = ov > 2 ? "2" : "1";
+        if (ov > 0) {
+          const a = ovAlpha(ov);
+          cell.dataset.ov = a >= 1 ? "max" : "1";
+          cell.style.setProperty("--oa", a.toFixed(2));
+        }
         if (new Date(`${day}T12:00:00`).getMonth() % 2 === 1) cell.dataset.odd = "1";
         cell.dataset.day = day;
         column.push(cell);
@@ -463,24 +487,125 @@ function renderMore(s: Stats): void {
 /* ---------- things you said ---------- */
 
 const QUOTE_TONE: Record<string, Tone> = { swearing: "heat", annoyed: "heat", caps: "heat", thanks: "warm" };
-const QUOTE_LABEL: Record<string, string> = { swearing: "swearing", annoyed: "annoyed", caps: "caps lock", thanks: "thanks", sorry: "sorry", banter: "banter", ultrathink: "ultrathink", goAhead: "go ahead" };
+const QUOTE_LABEL: Record<string, string> = { swearing: "Swearing", annoyed: "Annoyed", caps: "Caps lock", thanks: "Thanks", sorry: "Sorry", banter: "Banter", ultrathink: "Ultrathink", goAhead: "Go ahead" };
+const fmtDay = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+const attribution = (q: Quote) => `${QUOTE_LABEL[q.c] ?? q.c}, ${fmtDay(q.d)}`;
+const accentOf = (q: Quote) => { const t = QUOTE_TONE[q.c]; return t === "heat" ? "--h4" : t === "warm" ? "--w4" : "--faint"; };
+const SERIF = `Georgia,"Times New Roman",serif`;
+const DL_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>`;
+const TRASH_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>`;
+
+let shownQuotes: Shown[] = [];
+
+/** Metrics with the local quote edits applied — what renders and what ships in the link. */
+function withEdits(m: Metrics): Metrics {
+  const qs = applyEdits(m.quotes ?? []).map((x) => x.q);
+  return { ...m, quotes: qs.length ? qs : undefined };
+}
+
+/** Plain text with spoiler runs as blocks. */
+function richText(p: HTMLElement, text: string): void {
+  p.replaceChildren(...parts(text).map(({ s, hidden }) => {
+    if (!hidden) return document.createTextNode(s);
+    const b = el("span", "sp", s);
+    b.setAttribute("aria-label", "hidden");
+    return b;
+  }));
+}
+
+function iconBtn(svg: string, tip: string): HTMLButtonElement {
+  const b = el("button", "ico") as HTMLButtonElement;
+  b.innerHTML = svg;
+  b.dataset.tip = tip;
+  b.setAttribute("aria-label", tip);
+  return b;
+}
 
 function renderQuotes(m: Metrics): void {
   const box = $("quotes");
-  const qs = m.quotes ?? [];
-  box.classList.toggle("hidden", !qs.length);
-  if (!qs.length) return;
-  $("qgrid").replaceChildren(...qs.map((q) => {
+  const all = m.quotes ?? [];
+  shownQuotes = applyEdits(all);
+  box.classList.toggle("hidden", !all.length);
+  $("qreset").classList.toggle("hidden", !hasEdits());
+  $("qpng").classList.toggle("hidden", !shownQuotes.length);
+  if (!all.length) return;
+  if (!shownQuotes.length) {
+    $("qgrid").replaceChildren(el("p", "qempty", "Every quote removed — they are still here, restore them any time."));
+    return;
+  }
+  $("qgrid").replaceChildren(...shownQuotes.map(({ q, key }) => {
     const d = el("div", "quote");
-    d.append(el("p", undefined, q.t));
-    const meta = el("div", "qm");
-    const tag = el("span", "tag", QUOTE_LABEL[q.c] ?? q.c);
+    d.dataset.key = key;
+    const mark = el("span", "qmark", "“");
     const tone = QUOTE_TONE[q.c];
-    if (tone) tag.dataset.tone = tone;
-    meta.append(tag, el("span", undefined, new Date(`${q.d}T12:00:00`).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })));
-    d.append(meta);
+    if (tone) mark.dataset.tone = tone;
+    const p = el("p");
+    richText(p, q.t);
+    const meta = el("div", "qm");
+    const acts = el("div", "qa");
+    const dl = iconBtn(DL_SVG, "Save this quote as PNG");
+    dl.onclick = () => savePng(drawOneQuote(q), `promptstreak-quote-${q.d}.png`);
+    const rm = iconBtn(TRASH_SVG, "Remove this quote");
+    rm.onclick = () => {
+      removeQuote(key);
+      refreshQuotes();
+      toast("Quote removed — it stays out of the link", { label: "Undo", run: undoLast });
+    };
+    acts.append(dl, rm);
+    meta.append(el("span", undefined, attribution(q)), acts);
+    d.append(mark, p, meta);
     return d;
   }));
+}
+
+/** After an edit: redraw the card and rewrite the link so it ships the edited list. */
+function refreshQuotes(): void {
+  if (!metrics) return;
+  renderQuotes(metrics);
+  updateHash();
+}
+
+function undoLast(): void {
+  if (undo()) refreshQuotes();
+}
+
+/** Select text inside a quote and a "Hide" button floats above the selection. */
+function wireHide(): void {
+  const btn = $("hidebtn");
+  let pending: { key: string; start: number; end: number; text: string } | null = null;
+  let timer = 0;
+  const hide = () => { pending = null; btn.classList.add("hidden"); };
+  const update = () => {
+    const sel = document.getSelection();
+    if (!sel || sel.isCollapsed || !sel.rangeCount) return hide();
+    const range = sel.getRangeAt(0);
+    const node = range.commonAncestorContainer;
+    const p = (node instanceof Element ? node : node.parentElement)?.closest<HTMLElement>(".quote p");
+    if (!p) return hide();
+    const pre = document.createRange();
+    pre.selectNodeContents(p);
+    pre.setEnd(range.startContainer, range.startOffset);
+    const start = pre.toString().length;
+    const end = start + range.toString().length;
+    if (end <= start) return hide();
+    pending = { key: p.closest<HTMLElement>(".quote")!.dataset.key!, start, end, text: p.textContent ?? "" };
+    const r = range.getBoundingClientRect();
+    btn.style.left = `${Math.min(innerWidth - 60, Math.max(60, r.left + r.width / 2))}px`;
+    btn.style.top = `${Math.max(44, r.top - 8)}px`;
+    btn.classList.remove("hidden");
+  };
+  const schedule = () => { clearTimeout(timer); timer = setTimeout(update, 60) as unknown as number; };
+  document.addEventListener("selectionchange", schedule);
+  addEventListener("scroll", schedule, { passive: true });
+  btn.onmousedown = (e) => e.preventDefault(); // keep the selection alive through the click
+  btn.onclick = () => {
+    if (!pending) return;
+    hideRange(pending.key, pending.text, pending.start, pending.end);
+    document.getSelection()?.removeAllRanges();
+    hide();
+    refreshQuotes();
+    toast("Hidden — the link carries the blank too", { label: "Undo", run: undoLast });
+  };
 }
 
 function wrapText(ctx: CanvasRenderingContext2D, text: string, max: number): string[] {
@@ -495,44 +620,115 @@ function wrapText(ctx: CanvasRenderingContext2D, text: string, max: number): str
   return lines;
 }
 
-function drawQuoteCard(): HTMLCanvasElement {
+/** fillText that draws spoiler runs as rounded blocks. */
+function fillRich(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, size: number): void {
+  let cx = x;
+  for (const { s, hidden } of parts(text)) {
+    const w = ctx.measureText(s).width;
+    if (hidden) {
+      const keep = ctx.fillStyle;
+      ctx.fillStyle = CSS("--line2");
+      ctx.beginPath();
+      ctx.roundRect(cx + 1, y - size * 0.7, w - 2, size * 0.88, size * 0.18);
+      ctx.fill();
+      ctx.fillStyle = keep;
+    } else ctx.fillText(s, cx, y);
+    cx += w;
+  }
+}
+
+function savePng(canvas: HTMLCanvasElement, name: string): void {
+  canvas.toBlob((b) => {
+    if (!b) return;
+    const url = URL.createObjectURL(b);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = name;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast("PNG saved");
+  }, "image/png");
+}
+
+const cardCtx = (): [HTMLCanvasElement, CanvasRenderingContext2D] => {
   const canvas = $<HTMLCanvasElement>("qcanvas");
   const ctx = canvas.getContext("2d")!;
-  const W = 1200, H = 630;
-  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.scale(2, 2);
+  ctx.textAlign = "left";
   ctx.fillStyle = CSS("--bg");
-  ctx.fillRect(0, 0, W, H);
-  const sans = `system-ui,-apple-system,"Segoe UI",sans-serif`;
+  ctx.fillRect(0, 0, 1200, 630);
+  return [canvas, ctx];
+};
+const SANS = `system-ui,-apple-system,"Segoe UI",sans-serif`;
+
+/** One quote, big: the thing people crop and post. */
+function drawOneQuote(q: Quote): HTMLCanvasElement {
+  const [canvas, ctx] = cardCtx();
+  const W = 1200, H = 630;
+  const X = 132, MAXW = W - X - 72;
+  let size = 50, lines: string[] = [];
+  for (; size >= 26; size -= 2) {
+    ctx.font = `italic 500 ${size}px ${SANS}`;
+    lines = wrapText(ctx, q.t, MAXW);
+    if (lines.length * size * 1.32 <= 330) break;
+  }
+  const lh = size * 1.32;
+  const blockH = lines.length * lh + 52;
+  const top = Math.round((H - 60 - blockH) / 2) + size;
+  ctx.fillStyle = CSS(accentOf(q));
+  ctx.font = `italic 700 ${Math.round(size * 2.6)}px ${SERIF}`;
+  ctx.fillText("“", 56, top + size * 0.42);
+  ctx.fillStyle = CSS("--ink");
+  ctx.font = `italic 500 ${size}px ${SANS}`;
+  lines.forEach((l, i) => fillRich(ctx, l, X, top + i * lh, size));
+  ctx.fillStyle = CSS("--mute");
+  ctx.font = `400 21px ${SANS}`;
+  ctx.fillText(attribution(q), X, top + (lines.length - 1) * lh + 52);
+  ctx.fillStyle = CSS("--faint");
+  ctx.font = `400 16px ${SANS}`;
+  ctx.fillText("Things I said to Claude", 60, H - 44);
+  ctx.textAlign = "right";
+  ctx.fillStyle = CSS("--ink");
+  ctx.font = `500 17px ${CSS("--mono")}`;
+  ctx.fillText("npx promptstreak", W - 60, H - 44);
+  ctx.textAlign = "left";
+  return canvas;
+}
+
+/** The whole list on one card. */
+function drawQuoteCard(): HTMLCanvasElement {
+  const [canvas, ctx] = cardCtx();
+  const W = 1200, H = 630;
   const mono = CSS("--mono");
 
   ctx.fillStyle = CSS("--ink");
-  ctx.font = `700 36px ${sans}`;
+  ctx.font = `700 36px ${SANS}`;
   ctx.fillText("Things I said to Claude", 60, 74);
   ctx.fillStyle = CSS("--mute");
-  ctx.font = `400 17px ${sans}`;
+  ctx.font = `400 17px ${SANS}`;
   ctx.fillText("A year of prompting, unfiltered", 60, 102);
   ctx.textAlign = "right";
   ctx.fillStyle = CSS("--ink");
   ctx.font = `500 19px ${mono}`;
   ctx.fillText("npx promptstreak", W - 60, 74);
   ctx.fillStyle = CSS("--mute");
-  ctx.font = `400 17px ${sans}`;
+  ctx.font = `400 17px ${SANS}`;
   ctx.fillText("to get yours", W - 60, 102);
   ctx.textAlign = "left";
 
   // Fill the card top-down in ranking order, skipping quotes that don't fit;
   // shrink type only when fewer than five make it in.
-  const all = metrics?.quotes ?? [];
-  const LH = 1.3, TAG_GAP = 26, NEXT_GAP = 46, TOP = 156, BOTTOM = H - 44;
-  let size = 24, qs: typeof all = [], blocks: string[][] = [];
+  const all = shownQuotes.map((x) => x.q);
+  const X = 96, LH = 1.3, META_GAP = 26, NEXT_GAP = 44, TOP = 158, BOTTOM = H - 44;
+  let size = 24, qs: Quote[] = [], blocks: string[][] = [];
   for (; size >= 16; size -= 2) {
-    ctx.font = `500 ${size}px ${sans}`;
+    ctx.font = `italic 500 ${size}px ${SANS}`;
     qs = []; blocks = [];
     let y = TOP;
     for (const q of all) {
-      const lines = wrapText(ctx, `\u201c${q.t}\u201d`, W - 120);
-      const h = (lines.length - 1) * size * LH + TAG_GAP;
+      const lines = wrapText(ctx, q.t, W - X - 60);
+      const h = (lines.length - 1) * size * LH + META_GAP;
       if (y + h > BOTTOM) continue;
       qs.push(q); blocks.push(lines);
       y += h + NEXT_GAP;
@@ -541,21 +737,18 @@ function drawQuoteCard(): HTMLCanvasElement {
   }
   let y = TOP;
   qs.forEach((q, i) => {
+    ctx.fillStyle = CSS(accentOf(q));
+    ctx.font = `italic 700 ${Math.round(size * 2)}px ${SERIF}`;
+    ctx.fillText("“", 58, y + size * 0.36);
     ctx.fillStyle = CSS("--ink");
-    ctx.font = `500 ${size}px ${sans}`;
-    blocks[i].forEach((line, j) => ctx.fillText(line, 60, y + j * size * LH));
-    const ty = y + (blocks[i].length - 1) * size * LH + TAG_GAP;
-    const tone = QUOTE_TONE[q.c];
-    const label = (QUOTE_LABEL[q.c] ?? q.c).toUpperCase();
-    ctx.fillStyle = CSS(tone === "heat" ? "--h4" : tone === "warm" ? "--w4" : "--faint");
-    ctx.font = `600 12px ${sans}`;
-    ctx.fillText(label, 60, ty);
+    ctx.font = `italic 500 ${size}px ${SANS}`;
+    blocks[i].forEach((line, j) => fillRich(ctx, line, X, y + j * size * LH, size));
+    const ty = y + (blocks[i].length - 1) * size * LH + META_GAP;
     ctx.fillStyle = CSS("--faint");
-    ctx.font = `400 13px ${sans}`;
-    ctx.fillText(new Date(`${q.d}T12:00:00`).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }), 60 + ctx.measureText(label).width + 14, ty);
+    ctx.font = `400 13px ${SANS}`;
+    ctx.fillText(attribution(q), X, ty);
     y = ty + NEXT_GAP;
   });
-  ctx.restore();
   return canvas;
 }
 
@@ -678,6 +871,8 @@ function drawCard(): HTMLCanvasElement {
   const values = m.series[main];
   const level = levels(values);
   const over = overlay ? m.series[overlay] : null;
+  const ovAlpha = overlayAlpha(over);
+  const ovColor = CSS(ovTone ? ovRamp[4] : "--gold");
   const cols = columns(m.days);
   const at = new Map(m.days.map((d, i) => [d, i]));
   const gap = 4;
@@ -701,9 +896,8 @@ function drawCard(): HTMLCanvasElement {
       const ov = over?.[i] ?? 0;
       const odd = new Date(`${day}T12:00:00`).getMonth() % 2 === 1;
       const lv = level(values[i] ?? 0);
-      ctx.fillStyle = ov > 0
-        ? CSS(ovTone ? (ov > 2 ? ovRamp[4] : ovRamp[3]) : (ov > 2 ? "--gold" : "--gold2"))
-        : lv === 0 && odd ? CSS("--empty2") : CSS(ramp[lv]);
+      const base = lv === 0 && odd ? CSS("--empty2") : CSS(ramp[lv]);
+      ctx.fillStyle = ov > 0 ? hexMix(ovColor, base, ovAlpha(ov)) : base;
       ctx.beginPath();
       ctx.roundRect(cx, y0 + ri * step, cell, cell, 2);
       ctx.fill();
@@ -750,7 +944,13 @@ function render(animate = false): void {
   renderQuotes(metrics);
   renderByMonth(metrics);
   renderMore(metrics.stats);
-  void encode(metrics, metrics.stats.machines[0]).then((p) => history.replaceState(null, "", `${location.pathname}#${p}`));
+  updateHash();
+}
+
+/** The address bar is the share link: always the current view, quote edits included. */
+function updateHash(): void {
+  if (!metrics) return;
+  void encode(withEdits(metrics), metrics.stats.machines[0], true).then((p) => history.replaceState(null, "", `${location.pathname}#${p}`));
 }
 
 /** Same layout as the real thing: the last twelve months, empty, with the snake on them. */
@@ -814,7 +1014,9 @@ async function importHash(): Promise<void> {
     if (payload.stats.machines.length > 1) shared = expand(payload);
     else {
       shared = null;
-      snaps = upsert(payload);
+      // A link this page wrote carries edited quotes. If the machine is already
+      // here, its snapshot has the originals — keep those so undo still works.
+      if (!(payload.e && holds(payload))) snaps = upsert(payload);
     }
   } catch (err) {
     console.error("Could not read that link:", err);
@@ -823,12 +1025,17 @@ async function importHash(): Promise<void> {
 }
 
 let toastTimer = 0;
-function toast(msg: string): void {
+function toast(msg: string, action?: { label: string; run: () => void }): void {
   const t = $("toast");
-  t.textContent = msg;
+  t.replaceChildren(msg);
+  if (action) {
+    const b = el("button", "tb", action.label);
+    b.onclick = () => { delete t.dataset.show; action.run(); };
+    t.append(b);
+  }
   t.dataset.show = "1";
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => delete t.dataset.show, 1600) as unknown as number;
+  toastTimer = setTimeout(() => delete t.dataset.show, action ? 7000 : 1600) as unknown as number;
 }
 
 const copy = (text: string, msg: string) => void navigator.clipboard.writeText(text).then(() => toast(msg));
@@ -841,27 +1048,14 @@ async function boot(): Promise<void> {
   $("cta").onclick = () => copy("npx promptstreak", "Copied — paste it in a terminal");
   $("copyCmd").onclick = () => copy("npx promptstreak", "Copied");
   $("link").onclick = () => copy(location.href, "Share link copied");
-  $("png").onclick = () => drawCard().toBlob((b) => {
-    if (!b) return;
-    const url = URL.createObjectURL(b);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `promptstreak-${main}${overlay ? `+${overlay}` : ""}.png`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast("PNG saved");
-  }, "image/png");
-
-  $("qpng").onclick = () => drawQuoteCard().toBlob((b) => {
-    if (!b) return;
-    const url = URL.createObjectURL(b);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "promptstreak-quotes.png";
-    a.click();
-    URL.revokeObjectURL(url);
-    toast("PNG saved");
-  }, "image/png");
+  $("png").onclick = () => savePng(drawCard(), `promptstreak-${main}${overlay ? `+${overlay}` : ""}.png`);
+  $("qpng").onclick = () => savePng(drawQuoteCard(), "promptstreak-quotes.png");
+  $("qreset").onclick = () => {
+    resetEdits();
+    refreshQuotes();
+    toast("Quotes restored", { label: "Undo", run: undoLast });
+  };
+  wireHide();
 
   const drop = $("drop");
   const picker = $<HTMLInputElement>("picker");
