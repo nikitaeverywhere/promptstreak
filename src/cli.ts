@@ -114,7 +114,8 @@ async function main(): Promise<void> {
   const metrics = computeMetrics(events, {
     machines: [machine],
     noQuotes: flag("--no-quotes"),
-    ...(scan ? { tokens: scan.tokens, provenRun: { hours: scan.longestRunH, day: scan.longestRunDay } } : {}),
+    ...(scan ? { tokens: scan.tokens } : {}),
+    ...(scan?.coverage ? { agent: { runs: scan.runs, coverage: scan.coverage } } : {}),
   });
 
   if (flag("--curate") && metrics.quotes?.length) {
@@ -131,6 +132,14 @@ async function main(): Promise<void> {
   }
 
   console.log(`\n${renderStats(metrics)}\n`);
+  if (metrics.coverage) {
+    const kept = Math.round((Date.parse(metrics.coverage.to) - Date.parse(metrics.coverage.from)) / 86_400_000) + 1;
+    if (kept < 300)
+      console.log(
+        `\x1b[2mAutonomy and the unattended run come from session transcripts, which cover ${kept} days here.\n` +
+          `Claude Code prunes them after cleanupPeriodDays — set it to 3650 in ~/.claude/settings.json to keep a full year.\x1b[0m\n`,
+      );
+  }
   console.log(renderGrid(metrics, metric));
   console.log(`\n${renderLegend(metric)}\n`);
   const q = renderQuotes(metrics);

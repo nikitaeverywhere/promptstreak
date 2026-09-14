@@ -17,7 +17,7 @@ export const METRIC_LABELS: Record<MetricKey, string> = {
   promptWords: "Median prompt length (words)",
   nudges: "Nudges (<=25 chars)",
   specShaped: "Spec-shaped prompts",
-  autonomy: "Autonomy (hours agent worked alone)",
+  autonomy: "Autonomy (hours the agent kept working)",
   overnight: "Overnight deliveries",
   nightOwl: "At night (22:00–05:00)",
   politeness: '"Please" prompts',

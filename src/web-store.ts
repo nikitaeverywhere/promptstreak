@@ -76,6 +76,7 @@ export const expand = (p: Payload): Metrics => ({
   aux: p.aux,
   stats: p.stats,
   ...(p.quotes?.length ? { quotes: p.quotes } : {}),
+  ...(p.cov ? { coverage: { from: p.cov[0], to: p.cov[1] } } : {}),
 });
 
 /**
@@ -168,7 +169,10 @@ export function combine(snaps: Snapshot[]): Metrics {
   };
 
   const quotes = mergeQuotes(snaps.flatMap((s) => s.quotes ?? []));
-  return { from, to, days, series, aux, stats, ...(quotes.length ? { quotes } : {}) };
+  // Transcript coverage across machines: the widest span any of them has.
+  const covs = snaps.flatMap((s) => (s.cov ? [s.cov] : []));
+  const coverage = covs.length ? { from: covs.map((c) => c[0]).sort()[0], to: covs.map((c) => c[1]).sort().at(-1)! } : undefined;
+  return { from, to, days, series, aux, stats, ...(quotes.length ? { quotes } : {}), ...(coverage ? { coverage } : {}) };
 }
 
 /**

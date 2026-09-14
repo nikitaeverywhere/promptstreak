@@ -48,6 +48,8 @@ export interface Metrics {
   stats: Stats;
   /** Redacted, ranked lines worth quoting. Absent when the user opted out. */
   quotes?: Quote[];
+  /** Days with session transcripts on disk. Agent-side metrics are known only inside it. */
+  coverage?: { from: string; to: string };
 }
 
 export interface Quote {

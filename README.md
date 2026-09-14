@@ -28,7 +28,7 @@ The grid switches between fifteen metrics. Four of them are the interesting ones
 |---|---|
 | **God prompts** | Prompts of 5,000+ characters — a spec, not a message. These get gold cells. |
 | **Leash** | Median minutes between your prompts — short is steering, long is delegating. Watch it by month: if it is rising, you are handing over more. |
-| **Autonomy** | Hours the agent worked while you were away. |
+| **Autonomy** | Hours the agent kept working after a prompt, before it stopped or you spoke again. Read from session transcripts, so it reaches back only as far as Claude Code keeps them — days before that are hatched, not zero. |
 | **Nudges** | How much of your year was `yes`, `continue`, `try again`. |
 
 Plus prompt length, spec-shaped prompts, overnight handoffs, prompts at night, politeness, the plain
@@ -79,8 +79,9 @@ Two files, with very different reach:
 - **`~/.claude/history.jsonl`** — every prompt you submitted, going back roughly a year. This is
   what fills the grid.
 - **`~/.claude/projects/**/*.jsonl`** — full session transcripts, but Claude Code prunes these
-  after `cleanupPeriodDays` (about a month by default). Used to catch headless sessions the
-  history file misses.
+  after `cleanupPeriodDays` (about a month by default). This is the only place the agent's side
+  of the conversation lives, so autonomy, the longest unattended run and token usage come from
+  here, and they cover only the days that survive.
 
 If you want a fuller picture next year, raise `cleanupPeriodDays` in your Claude Code settings
 now. Nothing can recover transcripts that have already been pruned.

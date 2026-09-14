@@ -23,7 +23,7 @@ export const METRICS: MetricDef[] = [
   { key: "prompts", label: "Prompts", explain: "Every prompt you submitted, by day", main: true },
   { key: "godPrompts", label: "God prompts", explain: "Prompts over 5,000 characters — about two printed pages", main: true, overlay: true },
   { key: "leash", label: "Leash", explain: "Median minutes between prompts — short is steering, long is delegating", unit: "min", main: true, median: true },
-  { key: "autonomy", label: "Autonomy", explain: "Hours the agent kept working while you were away", unit: "h", main: true },
+  { key: "autonomy", label: "Autonomy", explain: "Hours the agent kept working after a prompt, from session transcripts", unit: "h", main: true },
   { key: "promptWords", label: "Prompt length", explain: "Median words per prompt", unit: "words", median: true },
   { key: "nudges", label: "Nudges", explain: "Prompts of 25 characters or fewer — yes, continue, try again" },
   { key: "specShaped", label: "Spec-shaped", explain: "Prompts written as a bulleted or numbered list" },

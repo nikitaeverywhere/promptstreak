@@ -63,6 +63,12 @@ function hexMix(top: string, base: string, a: number): string {
   return `rgb(${t.map((v, i) => Math.round(v * a + b[i] * (1 - a))).join(",")})`;
 }
 
+/** Whether transcripts cover a day, so agent-side metrics are real rather than blank. */
+const known = (day: string): boolean => {
+  const c = metrics?.coverage;
+  return !!c && day >= c.from && day <= c.to;
+};
+
 /** Sunday-first columns with a leading pad, exactly like GitHub. */
 function columns(days: string[]): (string | null)[][] {
   const pad = new Date(`${days[0]}T12:00:00`).getDay();
@@ -182,6 +188,7 @@ function renderCalendar(src: Metrics, animate: boolean): (HTMLElement | null)[][
         const i = at.get(day)!;
         const ov = over?.[i] ?? 0;
         cell.dataset.l = String(level(values[i] ?? 0));
+        if (main === "autonomy" && !known(day)) cell.dataset.nodata = "1";
         if (ov > 0) {
           const a = ovAlpha(ov);
           cell.dataset.ov = a >= 1 ? "max" : "1";
@@ -237,7 +244,8 @@ function tooltipFor(day: string): string {
   const date = new Date(`${day}T12:00:00`).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short", year: "numeric" });
   const prompts = m.series.prompts[i] ?? 0;
   const out = [`<b>${date}</b>`, prompts ? `${n(prompts)} prompt${prompts === 1 ? "" : "s"}` : `<i>No prompts</i>`];
-  if (main !== "prompts" && main !== "godPrompts") {
+  if (main === "autonomy" && !known(day)) out.push(`<br><i>No transcript kept for this day</i>`);
+  else if (main !== "prompts" && main !== "godPrompts") {
     const v = m.series[main][i] ?? 0;
     if (v > 0) out.push(`<br><i>${byKey(main).label}:</i> ${fmt(v, byKey(main))}`);
   }
@@ -346,11 +354,17 @@ function renderPickers(): void {
 /* ---------- stats ---------- */
 
 /** The fifth slot follows the primary metric; the other four never move. */
+/** "unattended since 1 Aug" — agent-side totals only reach as far as transcripts do. */
+const sinceLabel = (what: string): string => {
+  const c = metrics?.coverage;
+  return c ? `${what} since ${new Date(`${c.from}T12:00:00`).toLocaleDateString(undefined, { day: "numeric", month: "short" })}` : `${what} (needs transcripts)`;
+};
+
 function spotlight(s: Stats): [string, string] {
   switch (main) {
     case "godPrompts": return [`${short(s.maxWords)} words`, "your longest prompt"];
     case "leash": return [`${s.medianLeashMin.toFixed(1)} min`, "median between prompts"];
-    case "autonomy": return [`${short(s.autonomyHours)} h`, "unattended in total"];
+    case "autonomy": return [`${short(s.autonomyHours)} h`, sinceLabel("unattended")];
     case "promptWords": return [`${s.medianWords} words`, "median prompt"];
     case "nudges": return [`${(s.nudgeRatio * 100).toFixed(1)}%`, "were nudges"];
     case "specShaped": return [short(s.specShaped), "spec-shaped prompts"];
@@ -387,7 +401,7 @@ function factRows(s: Stats | null): Fact[] {
     [`${short(s.totalPrompts)} prompts`, `${s.activeDays} of ${s.spanDays} days`, mainClass()],
     overlayFact(s),
     [`${s.longestStreak} days`, "longest streak"],
-    [`${s.longestUnattendedH} h`, "longest unattended run"],
+    [s.longestUnattendedH ? `${s.longestUnattendedH} h` : "—", "longest unattended run"],
     [sv, sl, main === "prompts" ? undefined : mainClass()],
   ];
   if (s.machines.length > 1) rows.push([String(s.machines.length), "machines"]);
@@ -478,7 +492,7 @@ function renderMore(s: Stats): void {
       [`${(s.nudgeRatio * 100).toFixed(1)}%`, "were nudges"], [n(s.specShaped), "spec-shaped prompts"], [n(s.slashCommands), "slash commands"],
     ]),
     group("Delegating", [
-      [`${n(s.autonomyHours)} h`, "unattended, in total"], [`${s.medianLeashMin.toFixed(1)} min`, "median between prompts"], [n(s.overnightHandoffs), "overnight handoffs"],
+      [`${n(s.autonomyHours)} h`, sinceLabel("unattended")], [`${s.medianLeashMin.toFixed(1)} min`, "median between prompts"], [n(s.overnightHandoffs), "overnight handoffs"],
       [n(s.afterMidnight), "prompts after midnight"], [`${s.medianDaySpanHours} h`, "median day, first to last"], [n(s.please), "times you said please"],
     ]),
   ];

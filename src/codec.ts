@@ -68,13 +68,15 @@ export interface Payload {
   aux: Metrics["aux"];
   stats: Metrics["stats"];
   quotes?: Metrics["quotes"];
+  /** Transcript coverage, [from, to]. */
+  cov?: [string, string];
   label?: string;
   /** Written by the page rather than the CLI; its quotes may carry local edits. */
   e?: 1;
 }
 
 export function toPayload(m: Metrics, label?: string, fromPage = false): Payload {
-  return { v: 1, from: m.from, to: m.to, series: m.series, aux: m.aux, stats: m.stats, ...(m.quotes?.length ? { quotes: m.quotes } : {}), ...(label ? { label } : {}), ...(fromPage ? { e: 1 as const } : {}) };
+  return { v: 1, from: m.from, to: m.to, series: m.series, aux: m.aux, stats: m.stats, ...(m.quotes?.length ? { quotes: m.quotes } : {}), ...(m.coverage ? { cov: [m.coverage.from, m.coverage.to] as [string, string] } : {}), ...(label ? { label } : {}), ...(fromPage ? { e: 1 as const } : {}) };
 }
 
 export async function encode(m: Metrics, label?: string, fromPage = false): Promise<string> {

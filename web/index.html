@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>promptstreak — a year of prompting</title>
+<title>promptstreak — your Claude Code prompting habits, as a graph</title>
 <meta name="description" content="A year of your Claude Code prompts as a contribution graph. God prompts, leash length, autonomy. Runs entirely in your browser.">
 <meta property="og:title" content="promptstreak">
-<meta property="og:description" content="A year of prompting, as a contribution graph.">
+<meta property="og:description" content="A year of your prompting habits, as a contribution graph. God prompts, leash, swearing, nights.">
 <meta property="og:type" content="website">
 <!-- Google tag (gtag.js) — counts visits; the share data in the URL fragment is never sent -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-81PFBNNRJ1"></script>
@@ -121,6 +121,8 @@
   .cal{--oc:var(--gold)} .cal[data-ovtone="night"]{--oc:var(--n4)} .cal[data-ovtone="heat"]{--oc:var(--h4)} .cal[data-ovtone="warm"]{--oc:var(--w4)}
   .cell[data-ov]{--oa:1;background:color-mix(in srgb,var(--oc) calc(var(--oa)*100%),var(--bc))}
   .cell[data-ov="max"]{box-shadow:0 0 6px color-mix(in srgb,var(--oc) 45%,transparent)}
+  /* Days no transcript survives for: the metric is unknown there, not zero. */
+  .cell[data-nodata]{--bc:transparent;background:repeating-linear-gradient(135deg,var(--empty) 0 2px,var(--bg) 2px 4px)}
   .cell[data-void]{background:transparent}
   .cell[data-day]:hover{transform:scale(1.35);z-index:5}
   @keyframes pop{from{opacity:0;transform:scale(.5)}to{opacity:1;transform:none}}
@@ -320,6 +322,6 @@
 <div class="toast" id="toast"></div>
 <canvas id="canvas" width="2400" height="1260"></canvas>
 <canvas id="qcanvas" width="2400" height="1260" style="display:none"></canvas>
-<script type="module" src="./app.js?v=5414c7840d"></script>
+<script type="module" src="./app.js?v=5ec22c3572"></script>
 </body>
 </html>

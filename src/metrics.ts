@@ -1,20 +1,13 @@
 import type { Archetype, MetricKey, Metrics, PromptEvent, Quote, Stats, TokenStats } from "./types.js";
 import { asCandidate, moodScores, pickQuotes, type QuoteCandidate } from "./mood.js";
+import { hoursByDay, longestRun, type Run } from "./agent.js";
 
 /** A prompt this long is a spec, not a message. Fixed so any two people compare. */
 export const GOD_PROMPT_CHARS = 5000;
 /** "yes", "please continue", "yup" — steering, not instructing. */
 export const NUDGE_CHARS = 25;
-/** Below this, a gap is you thinking; above it, the agent is working alone. */
-export const AUTONOMY_GAP_MIN = 15;
 /** Beyond this, you left — it is not one working session any more. */
 export const SESSION_BREAK_H = 6;
-/**
- * A stretch longer than this is a session left open overnight, not work.
- * Without the cap the top results are 142h and 43h, which are plainly idle.
- */
-export const UNATTENDED_CAP_H = 24;
-
 const words = (text: string) => text.trim().split(/\s+/).filter(Boolean).length;
 
 const SPEC_SHAPED = /(^|\n)\s*([-*]|\d+[.)])\s+/;
@@ -81,11 +74,10 @@ export interface ComputeOptions {
   machines?: string[];
   tokens?: TokenStats;
   /**
-   * Longest run measured from transcripts, where agent activity proves the
-   * agent was working. Prompt gaps alone cannot tell that apart from you
-   * sleeping, so this wins whenever transcripts are available.
+   * Agent runs from transcripts. Prompt gaps alone cannot tell the agent
+   * working from you at lunch, so without this autonomy stays blank.
    */
-  provenRun?: { hours: number; day: string };
+  agent?: { runs: Run[]; coverage: { from: string; to: string } };
   /** Skip quote selection entirely (nothing quotable travels). */
   noQuotes?: boolean;
 }
@@ -197,7 +189,7 @@ export function computeMetrics(events: PromptEvent[], opts: ComputeOptions = {})
     if (i !== undefined) series.promptWords[i] = Math.round(median(w));
   }
 
-  // Leash and autonomy both come from the same session gaps.
+  // Leash comes from the gaps between your own prompts.
   const gaps = sessionGaps(sorted);
   const gapsByDay = new Map<string, number[]>();
   for (const g of gaps) (gapsByDay.get(g.day) ?? gapsByDay.set(g.day, []).get(g.day)!).push(g.minutes);
@@ -206,25 +198,17 @@ export function computeMetrics(events: PromptEvent[], opts: ComputeOptions = {})
     if (i === undefined) continue;
     series.leash[i] = Math.round(median(mins) * 10) / 10;
     aux.leashN[i] = mins.length;
-    const idle = mins.filter((m) => m >= AUTONOMY_GAP_MIN).reduce((a, b) => a + b, 0);
-    series.autonomy[i] = Math.round((idle / 60) * 10) / 10;
   }
 
-  // The session cap above truncates long runs at 6h, so the longest unattended
-  // stretch is measured on its own, capped only against left-open sessions.
-  let longestUnattendedH = 0;
-  let longestUnattendedAt = "";
-  const typedOnly = sorted.filter((e) => !e.isSlash);
-  for (let i = 1; i < typedOnly.length; i++) {
-    const prev = typedOnly[i - 1];
-    const cur = typedOnly[i];
-    if (cur.project !== prev.project) continue;
-    const h = (cur.ts - prev.ts) / 3600_000;
-    if (h > longestUnattendedH && h <= UNATTENDED_CAP_H) {
-      longestUnattendedH = h;
-      longestUnattendedAt = dayOf(prev.ts);
+  // Autonomy is the agent's side of the story: hours it kept working after a
+  // prompt, from transcripts. Where none survive, the day is unknown, not zero.
+  if (opts.agent) {
+    for (const [day, h] of hoursByDay(opts.agent.runs)) {
+      const i = index.get(day);
+      if (i !== undefined) series.autonomy[i] = Math.round(h * 10) / 10;
     }
   }
+  const run = longestRun(opts.agent?.runs ?? []);
 
   // Overnight delivery: you handed work over late and came back the next day.
   let overnightHandoffs = 0;
@@ -280,8 +264,8 @@ export function computeMetrics(events: PromptEvent[], opts: ComputeOptions = {})
     archetype: archetypeOf(medianLeashMin),
     leashByMonth,
     autonomyHours: Math.round(series.autonomy.reduce((a, b) => a + b, 0)),
-    longestUnattendedH: opts.provenRun?.hours ?? Math.round(longestUnattendedH * 10) / 10,
-    longestUnattendedAt: opts.provenRun?.day ?? longestUnattendedAt,
+    longestUnattendedH: run.hours,
+    longestUnattendedAt: run.day,
     overnightHandoffs,
     overnightHours: Math.round(overnightHours),
     longestStreak: longest,
@@ -307,7 +291,7 @@ export function computeMetrics(events: PromptEvent[], opts: ComputeOptions = {})
   };
 
   const quotes: Quote[] | undefined = opts.noQuotes ? undefined : pickQuotes(cands);
-  return { from, to, days, series, aux, stats, ...(quotes ? { quotes } : {}) };
+  return { from, to, days, series, aux, stats, ...(quotes ? { quotes } : {}), ...(opts.agent ? { coverage: opts.agent.coverage } : {}) };
 }
 
 function streaks(days: string[], active: Set<string>, to: string) {

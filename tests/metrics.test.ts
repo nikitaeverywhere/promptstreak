@@ -63,9 +63,11 @@ test("the same prompt logged twice is one prompt", () => {
   assert.equal(later.length, 2);
 });
 
-test("longest unattended run is not truncated by the session break", () => {
-  assert.equal(s.longestUnattendedH, 9);
-  assert.equal(s.longestUnattendedAt, "2026-01-03");
+test("without transcripts the agent's side is unknown, not guessed", () => {
+  assert.equal(s.longestUnattendedH, 0);
+  assert.equal(s.longestUnattendedAt, "");
+  assert.deepEqual(m.series.autonomy, [0, 0, 0, 0]);
+  assert.equal(m.coverage, undefined);
 });
 
 test("archetype thresholds", () => {
@@ -75,9 +77,36 @@ test("archetype thresholds", () => {
   assert.equal(archetypeOf(15), "Orchestrator");
 });
 
-test("autonomy counts only gaps of 15 minutes or more", () => {
-  assert.deepEqual(m.series.autonomy, [0.9, 0, 0, 0]); // the 55-minute gap
-  assert.equal(s.autonomyHours, 1);
+test("autonomy is the agent's run time, per local day, from transcripts", () => {
+  const h = 3600_000;
+  const t0 = Date.UTC(2026, 0, 2, 22, 0); // 22:00 on the 2nd (tests run in UTC)
+  const agent = { runs: [[t0, t0 + 4 * h], [t0 + 1 * h, t0 + 2 * h]] as [number, number][], coverage: { from: "2026-01-02", to: "2026-01-04" } };
+  const a = computeMetrics(events, { agent });
+  // 22:00–02:00 straddles midnight; the overlapping second run adds nothing.
+  assert.deepEqual(a.series.autonomy, [0, 2, 2, 0]);
+  assert.equal(a.stats.autonomyHours, 4);
+  assert.equal(a.stats.longestUnattendedH, 4);
+  assert.equal(a.stats.longestUnattendedAt, "2026-01-02");
+  assert.deepEqual(a.coverage, agent.coverage);
+});
+
+test("agent runs end when the agent stops or you speak again", async () => {
+  const { agentRuns, hoursByDay } = await import("../src/agent.js");
+  const m = 60_000;
+  const t0 = Date.UTC(2026, 5, 1, 23, 30);
+  const runs = agentRuns([
+    { ts: t0, human: true },
+    { ts: t0 + 10 * m, human: false },
+    { ts: t0 + 50 * m, human: false },
+    { ts: t0 + 60 * m, human: true }, // cuts the first run
+    { ts: t0 + 65 * m, human: false },
+    { ts: t0 + 65 * m + 3 * 3600_000, human: false }, // after a 3 h silence: idle, not working
+    { ts: t0 + 400 * m, human: true }, // a prompt the agent never answered
+  ]);
+  assert.deepEqual(runs, [[t0, t0 + 50 * m], [t0 + 60 * m, t0 + 65 * m]]);
+  const days = hoursByDay(runs);
+  assert.equal(Math.round(days.get("2026-06-01")! * 60), 30);
+  assert.equal(Math.round(days.get("2026-06-02")! * 60), 25);
 });
 
 test("overnight handoff is credited to the evening you left", () => {

@@ -1,12 +1,8 @@
 import { readFileSync } from "node:fs";
 import { parseTranscriptText } from "./parse-core.js";
+import { agentRuns, type Row, type Run } from "./agent.js";
 import type { PromptEvent, TokenStats } from "./types.js";
 
-/**
- * The agent went quiet for longer than this, so the session was idle rather
- * than working. Without it, sessions left open overnight read as 142-hour runs.
- */
-const IDLE_BREAK_MS = 2 * 3600_000;
 /** Transcripts are pruned unevenly, so tokens are reported for a fixed window. */
 export const TOKEN_WINDOW_DAYS = 30;
 
@@ -33,14 +29,10 @@ const priceFor = (model: string) => PRICE[model.replace(/-\d{8}$/, "")];
 export interface TranscriptScan {
   events: PromptEvent[];
   tokens: TokenStats;
-  /** Longest stretch with proven agent activity and no prompt from you. */
-  longestRunH: number;
-  longestRunDay: string;
-}
-
-interface Row {
-  ts: number;
-  human: boolean;
+  /** Every stretch the agent kept working after a prompt of yours. */
+  runs: Run[];
+  /** First and last day any transcript covers — agent metrics are blank outside it. */
+  coverage: { from: string; to: string } | null;
 }
 
 const SYNTHETIC_PREFIX =
@@ -71,10 +63,11 @@ export function scanTranscripts(files: string[], onProgress?: (done: number, tot
     input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0,
     fromDay: "", toDay: "", toolCalls: 0, subagents: 0,
   };
-  let longestRunH = 0;
-  let longestRunDay = "";
+  const runs: Run[] = [];
   let minTs = Infinity;
   let maxTs = 0;
+  let firstTs = Infinity;
+  let lastTs = 0;
   const seenUsage = new Set<string>();
   const subagentIds = new Set<string>();
   let usd = 0;
@@ -101,6 +94,8 @@ export function scanTranscripts(files: string[], onProgress?: (done: number, tot
       }
       const ts = Date.parse(o?.timestamp);
       if (!Number.isFinite(ts)) continue;
+      if (ts < firstTs) firstTs = ts;
+      if (ts > lastTs) lastTs = ts;
 
       if (o.type === "assistant" && o.message && ts >= windowStart) {
         if (ts < minTs) minTs = ts;
@@ -137,21 +132,8 @@ export function scanTranscripts(files: string[], onProgress?: (done: number, tot
       rows.push({ ts, human: o.isSidechain !== true && humanText(o) !== null });
     }
 
-    // A run is your prompt, then unbroken agent activity, until you prompt again.
-    rows.sort((a, b) => a.ts - b.ts);
-    for (let i = 0; i < rows.length; i++) {
-      if (!rows[i].human) continue;
-      let last = rows[i].ts;
-      for (let j = i + 1; j < rows.length && !rows[j].human; j++) {
-        if (rows[j].ts - last > IDLE_BREAK_MS) break;
-        last = rows[j].ts;
-      }
-      const h = (last - rows[i].ts) / 3600_000;
-      if (h > longestRunH) {
-        longestRunH = h;
-        longestRunDay = new Date(rows[i].ts).toLocaleDateString("en-CA");
-      }
-    }
+    // One transcript is one session: a prompt, then agent activity until the next prompt.
+    runs.push(...agentRuns(rows));
   });
 
   tokens.total = tokens.input + tokens.output + tokens.cacheRead + tokens.cacheWrite;
@@ -163,5 +145,7 @@ export function scanTranscripts(files: string[], onProgress?: (done: number, tot
   tokens.fromDay = Number.isFinite(minTs) ? new Date(minTs).toLocaleDateString("en-CA") : "";
   tokens.toDay = maxTs ? new Date(maxTs).toLocaleDateString("en-CA") : "";
 
-  return { events, tokens, longestRunH: Math.round(longestRunH * 10) / 10, longestRunDay };
+  const day = (t: number) => new Date(t).toLocaleDateString("en-CA");
+  const coverage = Number.isFinite(firstTs) ? { from: day(firstTs), to: day(lastTs) } : null;
+  return { events, tokens, runs, coverage };
 }
