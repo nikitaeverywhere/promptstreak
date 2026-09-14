@@ -5,6 +5,7 @@ import { METRICS, byKey, type MetricDef } from "./web-metrics.js";
 import { combine, daysBetween, expand, holds, load, save, upsert, type Snapshot } from "./web-store.js";
 import type { MetricKey, Metrics, Quote, Stats } from "./types.js";
 import { applyEdits, hasEdits, hideRange, parts, removeQuote, resetEdits, undo, type Shown } from "./web-quotes.js";
+import { censor } from "./mood.js";
 import { startSnake, stopSnake } from "./web-snake.js";
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -362,16 +363,28 @@ function spotlight(s: Stats): [string, string] {
   }
 }
 
-type Fact = [string, string, ("g" | "n" | "h" | "w" | "dim")?];
+/** "m" is the main metric's own colour: green, or the tone it is plotted in. */
+type Fact = [string, string, ("m" | "g" | "n" | "h" | "w" | "dim")?];
+const mainClass = (): Fact[2] => (toneClass(toneOf(main)) || "m") as Fact[2];
+
+/** The overlay's total, in the overlay's colour — God prompts when nothing is overlaid. */
+function overlayFact(s: Stats): Fact {
+  if (!overlay || overlay === "godPrompts") return [short(s.godPrompts), "God prompts", "g"];
+  const total = metrics?.series[overlay].reduce((a, b) => a + b, 0) ?? 0;
+  return [short(total), byKey(overlay).label.toLowerCase(), (toneClass(toneOf(overlay)) || "g") as Fact[2]];
+}
+
 function factRows(s: Stats | null): Fact[] {
-  if (!s) return [["—", "prompts", "dim"], ["—", "longest streak", "dim"], ["—", "God prompts", "dim"], ["—", "longest unattended run", "dim"], ["—", "words written", "dim"]];
+  if (!s) return [["—", "prompts", "dim"], ["—", "God prompts", "dim"], ["—", "longest streak", "dim"], ["—", "longest unattended run", "dim"], ["—", "words written", "dim"]];
   const [sv, sl] = spotlight(s);
+  // The number plotted on the graph wears the graph's colour: the prompt
+  // count when prompts are plotted, otherwise the spotlight stat.
   const rows: Fact[] = [
-    [`${short(s.totalPrompts)} prompts`, `${s.activeDays} of ${s.spanDays} days`],
+    [`${short(s.totalPrompts)} prompts`, `${s.activeDays} of ${s.spanDays} days`, main === "prompts" ? "m" : undefined],
+    overlayFact(s),
     [`${s.longestStreak} days`, "longest streak"],
-    [short(s.godPrompts), "God prompts", "g"],
     [`${s.longestUnattendedH} h`, "longest unattended run"],
-    [sv, sl, (toneClass(toneOf(main)) || undefined) as Fact[2]],
+    [sv, sl, main === "prompts" ? undefined : mainClass()],
   ];
   if (s.machines.length > 1) rows.push([String(s.machines.length), "machines"]);
   return rows;
@@ -496,6 +509,9 @@ const DL_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strok
 const TRASH_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>`;
 
 let shownQuotes: Shown[] = [];
+/** Star out swearing on screen and in the cards. Display only; the link is unchanged. */
+let censored = localStorage.getItem("promptstreak:censor") !== "0";
+const display = (t: string) => (censored ? censor(t) : t);
 
 /** Metrics with the local quote edits applied — what renders and what ships in the link. */
 function withEdits(m: Metrics): Metrics {
@@ -528,6 +544,11 @@ function renderQuotes(m: Metrics): void {
   box.classList.toggle("hidden", !all.length);
   $("qreset").classList.toggle("hidden", !hasEdits());
   $("qpng").classList.toggle("hidden", !shownQuotes.length);
+  const cb = $("qcensor");
+  cb.classList.toggle("hidden", !shownQuotes.length);
+  cb.toggleAttribute("data-on", censored);
+  cb.setAttribute("aria-pressed", String(censored));
+  cb.dataset.tip = censored ? "Swearing is starred out — click to show it in full" : "Swearing shown in full — click to star it out";
   if (!all.length) return;
   if (!shownQuotes.length) {
     $("qgrid").replaceChildren(el("p", "qempty", "Every quote removed — they are still here, restore them any time."));
@@ -540,7 +561,7 @@ function renderQuotes(m: Metrics): void {
     const tone = QUOTE_TONE[q.c];
     if (tone) mark.dataset.tone = tone;
     const p = el("p");
-    richText(p, q.t);
+    richText(p, display(q.t));
     const meta = el("div", "qm");
     const acts = el("div", "qa");
     const dl = iconBtn(DL_SVG, "Save this quote as PNG");
@@ -588,7 +609,11 @@ function wireHide(): void {
     const start = pre.toString().length;
     const end = start + range.toString().length;
     if (end <= start) return hide();
-    pending = { key: p.closest<HTMLElement>(".quote")!.dataset.key!, start, end, text: p.textContent ?? "" };
+    // Offsets come from the censored text on screen, but the edit must land on
+    // the real one — censoring swaps single characters, so the offsets match.
+    const key = p.closest<HTMLElement>(".quote")!.dataset.key!;
+    const raw = shownQuotes.find((x) => x.key === key)?.q.t ?? p.textContent ?? "";
+    pending = { key, start, end, text: raw };
     const r = range.getBoundingClientRect();
     btn.style.left = `${Math.min(innerWidth - 60, Math.max(60, r.left + r.width / 2))}px`;
     btn.style.top = `${Math.max(44, r.top - 8)}px`;
@@ -670,7 +695,7 @@ function drawOneQuote(q: Quote): HTMLCanvasElement {
   let size = 50, lines: string[] = [];
   for (; size >= 26; size -= 2) {
     ctx.font = `italic 500 ${size}px ${SANS}`;
-    lines = wrapText(ctx, q.t, MAXW);
+    lines = wrapText(ctx, display(q.t), MAXW);
     if (lines.length * size * 1.32 <= 330) break;
   }
   const lh = size * 1.32;
@@ -727,7 +752,7 @@ function drawQuoteCard(): HTMLCanvasElement {
     qs = []; blocks = [];
     let y = TOP;
     for (const q of all) {
-      const lines = wrapText(ctx, q.t, W - X - 60);
+      const lines = wrapText(ctx, display(q.t), W - X - 60);
       const h = (lines.length - 1) * size * LH + META_GAP;
       if (y + h > BOTTOM) continue;
       qs.push(q); blocks.push(lines);
@@ -918,7 +943,7 @@ function drawCard(): HTMLCanvasElement {
   ctx.textAlign = "center";
   facts.forEach(([v, l, ft], i) => {
     const fx = 60 + slot * (i + 0.5);
-    ctx.fillStyle = CSS(ft === "g" ? "--gold" : ft === "n" ? "--n4" : ft === "h" ? "--h4" : ft === "w" ? "--w4" : "--ink");
+    ctx.fillStyle = CSS(ft === "m" ? "--g4" : ft === "g" ? "--gold" : ft === "n" ? "--n4" : ft === "h" ? "--h4" : ft === "w" ? "--w4" : "--ink");
     ctx.font = `600 25px ${mono}`;
     ctx.fillText(v, fx, fy);
     ctx.fillStyle = CSS("--mute");
@@ -1050,6 +1075,11 @@ async function boot(): Promise<void> {
   $("link").onclick = () => copy(location.href, "Share link copied");
   $("png").onclick = () => savePng(drawCard(), `promptstreak-${main}${overlay ? `+${overlay}` : ""}.png`);
   $("qpng").onclick = () => savePng(drawQuoteCard(), "promptstreak-quotes.png");
+  $("qcensor").onclick = () => {
+    censored = !censored;
+    try { localStorage.setItem("promptstreak:censor", censored ? "1" : "0"); } catch { /* still applies for this visit */ }
+    if (metrics) renderQuotes(metrics);
+  };
   $("qreset").onclick = () => {
     resetEdits();
     refreshQuotes();

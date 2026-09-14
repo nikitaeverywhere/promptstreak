@@ -133,7 +133,7 @@
   .facts{display:flex;gap:40px;flex-wrap:wrap;justify-content:center;text-align:center;margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
   .fact b{font-family:var(--mono);font-size:21px;font-weight:600;display:block;letter-spacing:-.02em;line-height:1.2}
   .fact span{font-size:13.5px;color:var(--mute)}
-  .fact.g b{color:var(--gold)}
+  .fact.m b{color:var(--g4)} .fact.g b{color:var(--gold)}
   .fact.n b{color:var(--n4)} .fact.h b{color:var(--h4)} .fact.w b{color:var(--w4)}
   .fact.dim b{color:var(--faint)}
 
@@ -141,7 +141,8 @@
   .quotes{margin-top:16px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 24px 20px}
   .quotes .qh{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
   .quotes h2{margin:0;font-size:16px}
-  .qh .qacts{display:flex;gap:8px}
+  .qh .qacts{display:flex;gap:8px;align-items:center}
+  .qacts .chip{padding:0 12px;height:34px;font-size:13px}
   .qgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 32px}
   .quote{position:relative;padding:12px 0 10px 36px;display:flex;flex-direction:column;gap:6px;min-width:0}
   .quote .qmark{position:absolute;left:0;top:6px;font:italic 700 48px/1 var(--serif);color:var(--faint);pointer-events:none;user-select:none}
@@ -273,6 +274,7 @@
   <div class="quotes hidden" id="quotes">
     <div class="qh"><h2>Things you said</h2>
       <div class="qacts">
+      <button class="chip" id="qcensor" aria-pressed="true" data-on><i></i><span>censored</span></button>
       <button class="ico hidden" id="qreset" data-tip="Bring back hidden text and removed quotes" aria-label="Bring back hidden text and removed quotes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg></button>
       <button class="ico" id="qpng" data-tip="Download quotes as PNG" aria-label="Download quotes as PNG"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg></button>
       </div>
@@ -314,6 +316,6 @@
 <div class="toast" id="toast"></div>
 <canvas id="canvas" width="2400" height="1260"></canvas>
 <canvas id="qcanvas" width="2400" height="1260" style="display:none"></canvas>
-<script type="module" src="./app.js?v=23e9b64ea4"></script>
+<script type="module" src="./app.js?v=b52cf1f433"></script>
 </body>
 </html>

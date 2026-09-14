@@ -7,6 +7,7 @@ import { asCandidate, moodScores, pickQuotes, redact } from "../src/mood.js";
 test("swearing and annoyance are separate signals", () => {
   const s = moodScores("fuck this, it broke again");
   assert.equal(s.swearing, 1);
+  assert.equal(moodScores("ну бля, опять сломалось").swearing, 1);
   // "again" alone is a weak marker; one weak marker is a bug report, not a mood.
   assert.equal(s.annoyed, 0);
 });
@@ -90,4 +91,14 @@ test("spoil blanks a run without spelling out its length", async () => {
   // Long or repeated hides never grow past the cap.
   assert.equal(spoil("x".repeat(120), 0, 120), "█".repeat(12));
   assert.equal(spoil("ab", 0, 2), "███");
+});
+
+test("censor stars the first vowel and leaves everything else alone", async () => {
+  const { censor } = await import("../src/mood.js");
+  assert.equal(censor("Because you fucking dumb asshole stashed changes"), "Because you f*cking dumb assh*le stashed changes");
+  assert.equal(censor("WTF, retarded move. shit"), "W*F, r*tarded move. sh*t");
+  assert.equal(censor("нахуй эту сука фичу"), "н*хуй эту с*ка фичу");
+  assert.equal(censor("please add a unit test"), "please add a unit test");
+  // Length-preserving, so selection offsets on censored text map straight onto the original.
+  for (const w of ["fuck", "wtf", "asshole", "бля", "ffs"]) assert.equal(censor(w).length, w.length);
 });

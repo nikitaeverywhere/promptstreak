@@ -11,7 +11,8 @@ export type Mood = "swearing" | "annoyed" | "caps" | "thanks" | "sorry" | "bante
 
 const count = (text: string, re: RegExp) => (text.match(re) ?? []).length;
 
-const SWEAR = /\b(fuck\w*|shit\w*|wtf|wft|bullshit|dammit|damn\w*|crap\w*|bloody hell|ffs|pissed|asshole|bastard|retarded|bl[yj]a[dt]?\w*|бля\w*|нахуй|пизд\w+|сука|хер\w*|ебан\w*|заеб\w*|чёрт|черт)\b/gi;
+// \b is ASCII-only in JavaScript, so the Cyrillic entries need real letter boundaries.
+const SWEAR = /(?<![\p{L}\p{N}_])(fuck\w*|shit\w*|wtf|wft|bullshit|dammit|damn\w*|crap\w*|bloody hell|ffs|pissed|asshole|bastard|retarded|bl[yj]a[dt]?\w*|бля\p{L}*|нахуй|пизд\p{L}+|сука|хер\p{L}*|ебан\p{L}*|заеб\p{L}*|чёрт|черт)(?![\p{L}\p{N}_])/giu;
 const STRONG_ANNOY = /\b(why (did|do|would|the \w+ did) you|i (told|asked) you|you (broke|ignored|deleted|removed|undid|undoed|reverted|didn'?t listen)|for the (second|third|\d+\w*|last|nth) time|not what i (asked|wanted|said)|that'?s not what|seriously|come on|ugh+|are you (kidding|serious|retarded|dumb))\b/gi;
 const PUNCT_ANNOY = /(!{2,}|\?{2,}|\?!|!\?)/g;
 const WEAK_ANNOY = /\b(still (broken|wrong|not|doesn'?t|fails|missing)|again|wrong|nope|didn'?t work|doesn'?t work|not working)\b/gi;
@@ -25,6 +26,19 @@ const GO = /\b(go ahead|just do it|do it all|do (everything|all of it)|you decid
 const CAPS_WORD = /\b[A-Z]{4,}\b/g;
 /** Shouting, not shorthand. */
 const ACRONYMS = new Set(["JSON", "HTML", "HTTP", "HTTPS", "README", "TODO", "SVG", "PNG", "JPEG", "GIF", "YAML", "TOML", "JSONL", "ASCII", "UTF", "CORS", "CSRF", "JWT", "OAUTH", "REST", "GRPC", "SDK", "MCP", "NPM", "NODE", "CSS", "SCSS", "MDX", "AWS", "GCP", "IDE", "SQL", "NULL", "TRUE", "FALSE", "ENUM", "UUID", "URL", "URLS", "API", "APIS", "CLI", "TTL", "DNS", "OIDC", "SASS", "VSCODE", "MACOS", "IOS", "LLM", "LLMS", "GPT", "OTP", "SEO", "PDF", "CSV", "XML", "WASM", "PROD", "DEV", "ENV", "LTS", "DOM"]);
+
+const VOWEL = /[aeiouyаеёиоуыэюяії]/i;
+
+/** "fuck" -> "f*ck": one star on the first vowel after the opening letter, so the word stays readable and screenshot-safe. */
+function star(word: string): string {
+  const rest = word.slice(1);
+  const i = rest.search(VOWEL);
+  const at = i >= 0 ? i + 1 : word.length >= 3 ? 1 : -1;
+  return at < 0 ? word : word.slice(0, at) + "*" + word.slice(at + 1);
+}
+
+/** Swear words starred out. Display only — the data underneath is untouched. */
+export const censor = (text: string): string => text.replace(new RegExp(SWEAR.source, "giu"), star);
 
 export const capsWords = (text: string): number =>
   (text.match(CAPS_WORD) ?? []).filter((w) => !ACRONYMS.has(w)).length;
