@@ -12,7 +12,7 @@ export type Mood = "swearing" | "annoyed" | "caps" | "thanks" | "sorry" | "bante
 const count = (text: string, re: RegExp) => (text.match(re) ?? []).length;
 
 // \b is ASCII-only in JavaScript, so the Cyrillic entries need real letter boundaries.
-const SWEAR = /(?<![\p{L}\p{N}_])(fuck\w*|shit\w*|wtf|wft|bullshit|dammit|damn\w*|crap\w*|bloody hell|ffs|pissed|asshole|bastard|retarded|bl[yj]a[dt]?\w*|бля\p{L}*|нахуй|пизд\p{L}+|сука|хер\p{L}*|ебан\p{L}*|заеб\p{L}*|чёрт|черт)(?![\p{L}\p{N}_])/giu;
+const SWEAR = /(?<![\p{L}\p{N}_])(fuck\w*|shit(?:ty|s|e)?|wtf|wft|bullshit|dammit|damn\w*|crap\w*|bloody hell|ffs|pissed|asshole|bastard|retarded|bl[yj]a[dt]?\w*|бля\p{L}*|нахуй|пизд\p{L}+|сука|хер\p{L}*|ебан\p{L}*|заеб\p{L}*|чёрт|черт)(?![\p{L}\p{N}_])/giu;
 const STRONG_ANNOY = /\b(why (did|do|would|the \w+ did) you|i (told|asked) you|you (broke|ignored|deleted|removed|undid|undoed|reverted|didn'?t listen)|for the (second|third|\d+\w*|last|nth) time|not what i (asked|wanted|said)|that'?s not what|seriously|come on|ugh+|are you (kidding|serious|retarded|dumb))\b/gi;
 const PUNCT_ANNOY = /(!{2,}|\?{2,}|\?!|!\?)/g;
 const WEAK_ANNOY = /\b(still (broken|wrong|not|doesn'?t|fails|missing)|again|wrong|nope|didn'?t work|doesn'?t work|not working)\b/gi;

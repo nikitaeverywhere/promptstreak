@@ -8,6 +8,8 @@ test("swearing and annoyance are separate signals", () => {
   const s = moodScores("fuck this, it broke again");
   assert.equal(s.swearing, 1);
   assert.equal(moodScores("ну бля, опять сломалось").swearing, 1);
+  assert.equal(moodScores("this UI is shitty").swearing, 1);
+  assert.equal(moodScores("a guy who writes shitposts about SaaS").swearing, 0); // a genre, not a swear
   // "again" alone is a weak marker; one weak marker is a bug report, not a mood.
   assert.equal(s.annoyed, 0);
 });
