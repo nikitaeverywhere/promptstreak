@@ -44,6 +44,8 @@
   header>div{display:flex;flex-direction:column;justify-content:space-between;gap:6px}
   h1{font-size:22px;margin:0;letter-spacing:-.01em;font-weight:700;line-height:1.2;height:38px;display:flex;align-items:center}
   h1 b{color:var(--g4)}
+  /* The domain rides along in every screenshot, quietly. */
+  h1 .tld{color:var(--faint);opacity:.55;font-weight:400;font-size:.62em;margin-left:1px;letter-spacing:0;align-self:flex-end;padding-bottom:3px}
   .tag,.cta small{font-size:15px;line-height:1.4;color:var(--mute)}
   .cta{align-items:flex-end}
   .cta button{display:flex;align-items:center;gap:10px;padding:9px 13px;border:1px solid var(--line);border-radius:9px;
@@ -250,7 +252,7 @@
 <body>
 <div class="wrap">
   <header>
-    <div><h1>prompt<b>streak</b></h1><div class="tag">A year of prompting</div></div>
+    <div><h1>prompt<b>streak</b><span class="tld">.pages.dev</span></h1><div class="tag">A year of prompting</div></div>
     <div class="cta">
       <button id="cta" data-tip="Copies the command. It needs Node.js, and it reads your local Claude Code history — nothing leaves your machine.">npx promptstreak
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
