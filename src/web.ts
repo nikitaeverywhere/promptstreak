@@ -331,7 +331,7 @@ function renderPickers(): void {
   buildMenu(dd, {
     current: overlay,
     title: ov ? `+ ${ov.label}` : "+ Overlay",
-    hint: ov ? `Shown in ${ov.tone === "night" ? "purple" : ov.tone === "heat" ? "red" : ov.tone === "warm" ? "teal" : "gold"} on top` : "Highlight a second thing on top",
+    hint: ov ? ov.explain : "Highlight a second thing on top",
     items: METRICS.filter((m) => m.overlay && m.key !== main),
     none: "None",
     onPick: (k) => { overlay = k; render(true); },
@@ -359,6 +359,7 @@ function spotlight(s: Stats): [string, string] {
     case "annoyed": return [short(s.annoyed ?? 0), "times annoyed"];
     case "caps": return [short(s.capsRage ?? 0), "caps-lock moments"];
     case "thanks": return [short(metrics?.series.thanks.reduce((a, b) => a + b, 0) ?? 0), "thank-yous"];
+    case "emoji": return [short(s.emoji ?? 0), "prompts with emoji"];
     default: return [short(s.words), "words written"];
   }
 }
@@ -371,7 +372,8 @@ const mainClass = (): Fact[2] => (toneClass(toneOf(main)) || "m") as Fact[2];
 function overlayFact(s: Stats): Fact {
   if (!overlay || overlay === "godPrompts") return [short(s.godPrompts), "God prompts", "g"];
   const total = metrics?.series[overlay].reduce((a, b) => a + b, 0) ?? 0;
-  return [short(total), byKey(overlay).label.toLowerCase(), (toneClass(toneOf(overlay)) || "g") as Fact[2]];
+  const d = byKey(overlay);
+  return [short(total), d.fact ?? d.label.toLowerCase(), (toneClass(toneOf(overlay)) || "g") as Fact[2]];
 }
 
 function factRows(s: Stats | null): Fact[] {
@@ -480,7 +482,7 @@ function renderMore(s: Stats): void {
   ];
   groups.push(group("Mood", [
     [n(s.swearing ?? 0), "swears"], [n(s.annoyed ?? 0), "times annoyed"], [n(s.capsRage ?? 0), "caps-lock moments"],
-    [n(s.sorry), "apologies to a machine"], [n(s.ultrathink ?? 0), "ultrathinks"], [n(s.goAhead ?? 0), "go-aheads"],
+    [n(s.sorry), "apologies to a machine"], [n(s.emoji ?? 0), "with emoji"], [n(s.ultrathink ?? 0), "ultrathinks"], [n(s.goAhead ?? 0), "go-aheads"],
   ]));
   if (s.tokens) {
     const t = s.tokens;
@@ -499,8 +501,8 @@ function renderMore(s: Stats): void {
 
 /* ---------- things you said ---------- */
 
-const QUOTE_TONE: Record<string, Tone> = { swearing: "heat", annoyed: "heat", caps: "heat", thanks: "warm" };
-const QUOTE_LABEL: Record<string, string> = { swearing: "Swearing", annoyed: "Annoyed", caps: "Caps lock", thanks: "Thanks", sorry: "Sorry", banter: "Banter", ultrathink: "Ultrathink", goAhead: "Go ahead" };
+const QUOTE_TONE: Record<string, Tone> = { swearing: "heat", annoyed: "heat", caps: "heat", thanks: "warm", emoji: "warm" };
+const QUOTE_LABEL: Record<string, string> = { swearing: "Swearing", annoyed: "Annoyed", caps: "Caps lock", thanks: "Thanks", sorry: "Sorry", banter: "Banter", ultrathink: "Ultrathink", goAhead: "Go ahead", emoji: "Emoji" };
 const fmtDay = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
 const attribution = (q: Quote) => `${QUOTE_LABEL[q.c] ?? q.c}, ${fmtDay(q.d)}`;
 const accentOf = (q: Quote) => { const t = QUOTE_TONE[q.c]; return t === "heat" ? "--h4" : t === "warm" ? "--w4" : "--faint"; };

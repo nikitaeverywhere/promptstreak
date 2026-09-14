@@ -26,7 +26,8 @@ export type MetricKey =
   | "swearing"
   | "annoyed"
   | "caps"
-  | "thanks";
+  | "thanks"
+  | "emoji";
 
 export type Archetype = "Babysitter" | "Collaborator" | "Orchestrator";
 
@@ -118,6 +119,8 @@ export interface Stats {
   swearing: number;
   annoyed: number;
   capsRage: number;
+  /** Prompts with a smiley, an emoji or a kaomoji in them. */
+  emoji: number;
   banter: number;
   ultrathink: number;
   goAhead: number;

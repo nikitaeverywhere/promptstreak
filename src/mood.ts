@@ -7,7 +7,7 @@
  * more quotable).
  */
 
-export type Mood = "swearing" | "annoyed" | "caps" | "thanks" | "sorry" | "banter" | "ultrathink" | "goAhead";
+export type Mood = "swearing" | "annoyed" | "caps" | "thanks" | "sorry" | "banter" | "ultrathink" | "goAhead" | "emoji";
 
 const count = (text: string, re: RegExp) => (text.match(re) ?? []).length;
 
@@ -24,6 +24,11 @@ const BANTER_EMOJI = /😂|🤣|😅|💀|🙃|😎|:D|;\)/g;
 const ULTRA = /\b(ultrathink|think (hard|harder|deeply|step by step|carefully)|megathink)\b/gi;
 const GO = /\b(go ahead|just do it|do it all|do (everything|all of it)|you decide|use your (best )?judg\w+|don'?t ask( me)?|without asking|no need to ask|make it happen)\b/gi;
 const CAPS_WORD = /\b[A-Z]{4,}\b/g;
+// Feelings only: faces, hands, hearts, party. Checkmarks, arrows, folders and
+// the rest of the pictographic block are tooling, not mood, and stay out.
+const EMOJI = /[\u{1F600}-\u{1F64F}\u{1F90C}-\u{1F93A}\u{1F970}-\u{1F97A}\u{1F9D0}\u{1FAE0}-\u{1FAE8}\u{1FAF0}-\u{1FAF8}\u{1F44A}-\u{1F450}\u{270A}-\u{270D}\u{2764}\u{1F493}-\u{1F49F}\u{1F5A4}\u{1F389}\u{1F38A}\u{1F525}\u{1F480}\u{1F4A9}\u{1F4AA}\u{1F440}\u{2728}\u{1F680}\u{1F4AF}\u{1F4A5}\u{1F31F}\u{2B50}\u{1F37B}\u{1F942}\u{1F4A4}]/gu;
+// Text smileys and kaomoji, only as their own token so 10:30 and http:// stay clear.
+const EMOTICON = /(?<!\S)(?::-?[()DPp|3]|;-?[()D]|=[()D]|<3|[xX][dD]|\^_*\^|-_-|[oO0]_+[oO0]|>_<|T_T|¯\\_\(ツ\)_\/¯|:'\()(?=$|[\s.,!?])/gmu;
 /** Shouting, not shorthand. */
 const ACRONYMS = new Set(["JSON", "HTML", "HTTP", "HTTPS", "README", "TODO", "SVG", "PNG", "JPEG", "GIF", "YAML", "TOML", "JSONL", "ASCII", "UTF", "CORS", "CSRF", "JWT", "OAUTH", "REST", "GRPC", "SDK", "MCP", "NPM", "NODE", "CSS", "SCSS", "MDX", "AWS", "GCP", "IDE", "SQL", "NULL", "TRUE", "FALSE", "ENUM", "UUID", "URL", "URLS", "API", "APIS", "CLI", "TTL", "DNS", "OIDC", "SASS", "VSCODE", "MACOS", "IOS", "LLM", "LLMS", "GPT", "OTP", "SEO", "PDF", "CSV", "XML", "WASM", "PROD", "DEV", "ENV", "LTS", "DOM"]);
 
@@ -60,6 +65,7 @@ export function moodScores(text: string): Record<Mood, number> {
     banter: count(text, BANTER) + count(text, BANTER_EMOJI),
     ultrathink: count(text, ULTRA),
     goAhead: count(text, GO),
+    emoji: count(text, EMOJI) + count(text, EMOTICON),
   };
 }
 
@@ -107,7 +113,8 @@ export function quoteScore(scores: Record<Mood, number>, text: string): number {
     scores.banter * 2 +
     scores.sorry * 1.5 +
     scores.thanks * 0.5 +
-    scores.goAhead * 0.5 -
+    scores.goAhead * 0.5 +
+    scores.emoji * 1 -
     Math.max(0, text.length - 120) / 40
   );
 }
@@ -139,7 +146,7 @@ export function pickQuotes(cands: QuoteCandidate[], max = QUOTE_MAX): Quote[] {
     cands
       .filter((c) => c.scores[mood] > 0)
       .sort((a, b) => b.scores[mood] - a.scores[mood] || b.score - a.score || b.ts - a.ts);
-  for (const mood of ["swearing", "caps", "annoyed", "banter", "sorry", "thanks"] as Mood[]) {
+  for (const mood of ["swearing", "caps", "annoyed", "banter", "sorry", "thanks", "emoji"] as Mood[]) {
     let got = 0;
     for (const c of by(mood)) {
       if (got >= 2 || out.length >= max) break;

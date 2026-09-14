@@ -160,6 +160,7 @@ export function combine(snaps: Snapshot[]): Metrics {
     swearing: sum((s) => s.swearing ?? 0),
     annoyed: sum((s) => s.annoyed ?? 0),
     capsRage: sum((s) => s.capsRage ?? 0),
+    emoji: sum((s) => s.emoji ?? 0),
     banter: sum((s) => s.banter ?? 0),
     ultrathink: sum((s) => s.ultrathink ?? 0),
     goAhead: sum((s) => s.goAhead ?? 0),

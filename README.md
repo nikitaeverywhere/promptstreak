@@ -22,7 +22,7 @@ version at [promptstreak.pages.dev](https://promptstreak.pages.dev). **Nothing i
 
 ## What it measures
 
-The grid switches between ten metrics. Four of them are the interesting ones:
+The grid switches between fifteen metrics. Four of them are the interesting ones:
 
 | Metric | What it says about you |
 |---|---|
@@ -31,8 +31,9 @@ The grid switches between ten metrics. Four of them are the interesting ones:
 | **Autonomy** | Hours the agent worked while you were away. |
 | **Nudges** | How much of your year was `yes`, `continue`, `try again`. |
 
-Plus prompt length, spec-shaped prompts, overnight handoffs, night-owl hours, politeness, and the
-plain prompt count.
+Plus prompt length, spec-shaped prompts, overnight handoffs, prompts at night, politeness, the plain
+prompt count, and a mood family — swearing, annoyed, caps lock, thanks, emoji — that also works as
+an overlay on any of the others.
 
 ## Usage
 

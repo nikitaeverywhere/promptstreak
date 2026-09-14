@@ -116,6 +116,7 @@ export function computeMetrics(events: PromptEvent[], opts: ComputeOptions = {})
     annoyed: zeros(),
     caps: zeros(),
     thanks: zeros(),
+    emoji: zeros(),
   };
 
   const aux = { leashN: zeros(), typed: zeros() };
@@ -130,7 +131,7 @@ export function computeMetrics(events: PromptEvent[], opts: ComputeOptions = {})
   let please = 0;
   let thanks = 0;
   let sorry = 0;
-  const mood = { swearing: 0, annoyed: 0, capsRage: 0, banter: 0, ultrathink: 0, goAhead: 0 };
+  const mood = { swearing: 0, annoyed: 0, capsRage: 0, banter: 0, ultrathink: 0, goAhead: 0, emoji: 0 };
   const cands: QuoteCandidate[] = [];
   let maxLength = 0;
   let maxLengthDay = from;
@@ -177,6 +178,7 @@ export function computeMetrics(events: PromptEvent[], opts: ComputeOptions = {})
     if (ms.annoyed > 0) { series.annoyed[i]++; mood.annoyed++; }
     if (ms.caps > 0) { series.caps[i]++; mood.capsRage++; }
     if (ms.thanks > 0) series.thanks[i]++;
+    if (ms.emoji > 0) { series.emoji[i]++; mood.emoji++; }
     if (ms.banter > 0) mood.banter++;
     if (ms.ultrathink > 0) mood.ultrathink++;
     if (ms.goAhead > 0) mood.goAhead++;
@@ -295,6 +297,7 @@ export function computeMetrics(events: PromptEvent[], opts: ComputeOptions = {})
     swearing: mood.swearing,
     annoyed: mood.annoyed,
     capsRage: mood.capsRage,
+    emoji: mood.emoji,
     banter: mood.banter,
     ultrathink: mood.ultrathink,
     goAhead: mood.goAhead,

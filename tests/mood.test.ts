@@ -113,3 +113,13 @@ test("machines merge quotes by rank, not by date", async () => {
   ]);
   assert.deepEqual(merged.map((q) => q.c), ["swearing", "caps", "sorry", "thanks"]);
 });
+
+test("emoji counts feelings, not tooling symbols or clock times", () => {
+  assert.equal(moodScores("done :) thanks").emoji, 1);
+  assert.equal(moodScores("🎉🎉 shipped").emoji, 2);
+  assert.equal(moodScores("¯\\_(ツ)_/¯ no idea").emoji, 1);
+  assert.equal(moodScores("O___o what").emoji, 1);
+  assert.equal(moodScores("lol xD").emoji, 1);
+  assert.equal(moodScores("✅ done, ➡️ next, see ./src/a.ts:D").emoji, 0);
+  assert.equal(moodScores("meet at 10:30 http://x.com/:P").emoji, 0);
+});
