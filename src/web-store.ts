@@ -1,6 +1,7 @@
 import type { Payload } from "./codec.js";
-import type { MetricKey, Metrics, Stats } from "./types.js";
+import type { MetricKey, Metrics, Quote, Stats } from "./types.js";
 import { archetypeOf } from "./metrics.js";
+import { asCandidate, pickQuotes } from "./mood.js";
 import { METRICS } from "./web-metrics.js";
 
 const KEY = "promptstreak:machines";
@@ -165,9 +166,22 @@ export function combine(snaps: Snapshot[]): Metrics {
     ...streaks(days, series.prompts),
   };
 
-  // Quotes from every machine, most recent first, capped like a single one.
-  const quotes = snaps.flatMap((s) => s.quotes ?? []).sort((a, b) => (a.d < b.d ? 1 : -1)).slice(0, 10);
+  const quotes = mergeQuotes(snaps.flatMap((s) => s.quotes ?? []));
   return { from, to, days, series, aux, stats, ...(quotes.length ? { quotes } : {}) };
+}
+
+/**
+ * Re-rank the union the way one machine's list was ranked — swearing first,
+ * two per mood, no near-repeats — rather than by date, which would float
+ * whatever was said last week to the top.
+ */
+export function mergeQuotes(all: Quote[]): Quote[] {
+  const cands = all.flatMap((q) => asCandidate(q.t, Date.parse(`${q.d}T12:00:00Z`), q.d) ?? []);
+  const picked: Quote[] = pickQuotes(cands);
+  // A curated line with no detector hit still deserves its place at the end.
+  const seen = new Set(picked.map((q) => q.t));
+  for (const q of all) if (picked.length < 10 && !seen.has(q.t)) { picked.push(q); seen.add(q.t); }
+  return picked;
 }
 
 function streaks(days: string[], prompts: number[]) {

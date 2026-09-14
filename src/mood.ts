@@ -29,12 +29,14 @@ const ACRONYMS = new Set(["JSON", "HTML", "HTTP", "HTTPS", "README", "TODO", "SV
 
 const VOWEL = /[aeiouyаеёиоуыэюяії]/i;
 
-/** "fuck" -> "f*ck": one star on the first vowel after the opening letter, so the word stays readable and screenshot-safe. */
+/**
+ * "fuck" -> "f*ck": one star on the first vowel after the opening letter, so
+ * the word stays readable and screenshot-safe. Vowel-less abbreviations
+ * (wtf, ffs) already censor themselves and are left alone.
+ */
 function star(word: string): string {
-  const rest = word.slice(1);
-  const i = rest.search(VOWEL);
-  const at = i >= 0 ? i + 1 : word.length >= 3 ? 1 : -1;
-  return at < 0 ? word : word.slice(0, at) + "*" + word.slice(at + 1);
+  const i = word.slice(1).search(VOWEL);
+  return i < 0 ? word : word.slice(0, i + 1) + "*" + word.slice(i + 2);
 }
 
 /** Swear words starred out. Display only — the data underneath is untouched. */

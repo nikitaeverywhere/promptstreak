@@ -96,9 +96,20 @@ test("spoil blanks a run without spelling out its length", async () => {
 test("censor stars the first vowel and leaves everything else alone", async () => {
   const { censor } = await import("../src/mood.js");
   assert.equal(censor("Because you fucking dumb asshole stashed changes"), "Because you f*cking dumb assh*le stashed changes");
-  assert.equal(censor("WTF, retarded move. shit"), "W*F, r*tarded move. sh*t");
+  assert.equal(censor("WTF, retarded move. shit"), "WTF, r*tarded move. sh*t"); // wtf censors itself
   assert.equal(censor("нахуй эту сука фичу"), "н*хуй эту с*ка фичу");
   assert.equal(censor("please add a unit test"), "please add a unit test");
   // Length-preserving, so selection offsets on censored text map straight onto the original.
   for (const w of ["fuck", "wtf", "asshole", "бля", "ffs"]) assert.equal(censor(w).length, w.length);
+});
+
+test("machines merge quotes by rank, not by date", async () => {
+  const { mergeQuotes } = await import("../src/web-store.js");
+  const merged = mergeQuotes([
+    { t: "sorry, keep going", c: "sorry", d: "2026-09-04" },
+    { t: "thanks, perfect", c: "thanks", d: "2026-09-03" },
+    { t: "why the fuck did you delete that", c: "swearing", d: "2026-02-08" },
+    { t: "WHY DID YOU DELETE THE TESTS!!!", c: "caps", d: "2025-12-13" },
+  ]);
+  assert.deepEqual(merged.map((q) => q.c), ["swearing", "caps", "sorry", "thanks"]);
 });
