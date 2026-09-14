@@ -166,6 +166,11 @@
   .sp{background:var(--line2);color:transparent;border-radius:4px;user-select:none;font-style:normal}
   ::selection{background:color-mix(in srgb,var(--g4) 35%,transparent)}
   .qempty{margin:0;font-size:14px;color:var(--faint)}
+  /* Folded: four quotes, three lines each — a card that fits a screenshot. Unfold for the lot. */
+  .quotes[data-folded] .quote:nth-child(n+5){display:none}
+  .quotes[data-folded] .quote p{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  .unfold{display:block;margin:10px auto 0;padding:6px 12px;background:none;border:0;border-radius:8px;color:var(--mute);font:500 13.5px inherit;font-family:inherit;cursor:pointer;transition:.15s var(--ease)}
+  .unfold:hover{color:var(--ink);background:var(--panel2)}
   #hidebtn{position:fixed;transform:translate(-50%,-100%);display:inline-flex;align-items:center;gap:6px;background:#05070a;border:1px solid var(--line2);
     color:var(--ink);border-radius:8px;padding:5px 10px;font:500 13px/1 inherit;font-family:inherit;z-index:96;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.35)}
   #hidebtn:hover{border-color:var(--faint)}
@@ -288,6 +293,7 @@
       </div>
     </div>
     <div class="qgrid" id="qgrid"></div>
+    <button class="unfold hidden" id="qmore" type="button"></button>
   </div>
 
   <section id="bymonth">
@@ -324,6 +330,6 @@
 <div class="toast" id="toast"></div>
 <canvas id="canvas" width="2400" height="1260"></canvas>
 <canvas id="qcanvas" width="2400" height="1260" style="display:none"></canvas>
-<script type="module" src="./app.js?v=5ec22c3572"></script>
+<script type="module" src="./app.js?v=9cdeee7f69"></script>
 </body>
 </html>

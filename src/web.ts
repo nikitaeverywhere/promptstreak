@@ -527,6 +527,9 @@ const DL_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strok
 const TRASH_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>`;
 
 let shownQuotes: Shown[] = [];
+/** Folded by default: the first four, three lines each. Unfolds for this visit only. */
+let quotesUnfolded = false;
+const QUOTES_FOLDED = 4;
 /** Star out swearing on screen and in the cards. Display only; the link is unchanged. */
 let censored = localStorage.getItem("promptstreak:censor") !== "0";
 const display = (t: string) => (censored ? censor(t) : t);
@@ -568,8 +571,11 @@ function renderQuotes(m: Metrics): void {
   cb.setAttribute("aria-pressed", String(censored));
   cb.dataset.tip = censored ? "Swearing is starred out — click to show it in full" : "Swearing shown in full — click to star it out";
   if (!all.length) return;
+  box.toggleAttribute("data-folded", !quotesUnfolded);
+  const more = $("qmore");
   if (!shownQuotes.length) {
     $("qgrid").replaceChildren(el("p", "qempty", "Every quote removed — they are still here, restore them any time."));
+    more.classList.add("hidden");
     return;
   }
   $("qgrid").replaceChildren(...shownQuotes.map(({ q, key }) => {
@@ -595,6 +601,15 @@ function renderQuotes(m: Metrics): void {
     d.append(mark, p, meta);
     return d;
   }));
+  // Anything out of sight — quotes past the fourth, or a line past the third — earns the button.
+  const clipped = !quotesUnfolded && Array.from($("qgrid").querySelectorAll<HTMLElement>(".quote p")).some((p) => p.scrollHeight > p.clientHeight + 1);
+  const extra = shownQuotes.length - QUOTES_FOLDED;
+  more.classList.toggle("hidden", !quotesUnfolded && extra <= 0 && !clipped);
+  more.textContent = quotesUnfolded ? "Show less" : extra > 0 ? `Show all ${shownQuotes.length}` : "Show in full";
+  more.onclick = () => {
+    quotesUnfolded = !quotesUnfolded;
+    if (metrics) renderQuotes(metrics);
+  };
 }
 
 /** After an edit: redraw the card and rewrite the link so it ships the edited list. */
