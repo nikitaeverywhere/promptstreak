@@ -326,6 +326,8 @@ function renderPickers(): void {
     current: main, title: def.label, hint: def.explain, items: METRICS,
     onPick: (k) => { if (!k) return; main = k; if (overlay === k) overlay = null; render(true); },
   });
+  const mt = toneOf(main);
+  if (mt) ddM.dataset.tone = mt; else delete ddM.dataset.tone;
   const ov = overlay ? byKey(overlay) : null;
   const dd = $("ddOver");
   buildMenu(dd, {
@@ -353,7 +355,7 @@ function spotlight(s: Stats): [string, string] {
     case "nudges": return [`${(s.nudgeRatio * 100).toFixed(1)}%`, "were nudges"];
     case "specShaped": return [short(s.specShaped), "spec-shaped prompts"];
     case "overnight": return [short(s.overnightHandoffs), "overnight handoffs"];
-    case "nightOwl": return [short(s.afterMidnight), "prompts after midnight"];
+    case "nightOwl": return [short(metrics?.series.nightOwl.reduce((a, b) => a + b, 0) ?? 0), "sent between 22:00 and 05:00"];
     case "politeness": return [short(s.please), "times you said please"];
     case "swearing": return [short(s.swearing ?? 0), "swears"];
     case "annoyed": return [short(s.annoyed ?? 0), "times annoyed"];
@@ -379,10 +381,10 @@ function overlayFact(s: Stats): Fact {
 function factRows(s: Stats | null): Fact[] {
   if (!s) return [["—", "prompts", "dim"], ["—", "God prompts", "dim"], ["—", "longest streak", "dim"], ["—", "longest unattended run", "dim"], ["—", "words written", "dim"]];
   const [sv, sl] = spotlight(s);
-  // The number plotted on the graph wears the graph's colour: the prompt
-  // count when prompts are plotted, otherwise the spotlight stat.
+  // The prompt count and the plotted metric's spotlight both wear the graph's
+  // colour; when prompts are plotted the spotlight is just words written.
   const rows: Fact[] = [
-    [`${short(s.totalPrompts)} prompts`, `${s.activeDays} of ${s.spanDays} days`, main === "prompts" ? "m" : undefined],
+    [`${short(s.totalPrompts)} prompts`, `${s.activeDays} of ${s.spanDays} days`, mainClass()],
     overlayFact(s),
     [`${s.longestStreak} days`, "longest streak"],
     [`${s.longestUnattendedH} h`, "longest unattended run"],
@@ -872,7 +874,7 @@ function drawCard(): HTMLCanvasElement {
   const ramp = rampFor(tone);
   const ovRamp = rampFor(ovTone);
 
-  ctx.fillStyle = CSS("--ink");
+  ctx.fillStyle = CSS(ramp[4]);
   ctx.font = `700 36px ${sans}`;
   ctx.fillText(def.label, 60, 74);
   if (overlay) {
@@ -1002,6 +1004,7 @@ function renderEmpty(): void {
   };
   const ddM = $("ddMain");
   ddM.classList.add("wait");
+  delete ddM.dataset.tone;
   buildMenu(ddM, { current: null, title: "Waiting for data…", hint: "Run npx promptstreak and open the link it prints", items: [], onPick: () => {}, locked: true });
   const board = renderCalendar(blank, false);
   renderFacts(null);

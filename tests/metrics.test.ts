@@ -86,7 +86,7 @@ test("overnight handoff is credited to the evening you left", () => {
   assert.deepEqual(m.series.overnight, [0, 0, 1, 0]);
 });
 
-test("nudges, spec shape, night owl and politeness", () => {
+test("nudges, spec shape, at-night and politeness", () => {
   assert.equal(s.nudges, 4);
   assert.equal(s.nudgeRatio, 0.8);
   assert.equal(s.specShaped, 1);

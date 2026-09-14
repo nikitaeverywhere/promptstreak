@@ -19,7 +19,7 @@ export const METRIC_LABELS: Record<MetricKey, string> = {
   specShaped: "Spec-shaped prompts",
   autonomy: "Autonomy (hours agent worked alone)",
   overnight: "Overnight deliveries",
-  nightOwl: "Night prompts (22:00-05:00)",
+  nightOwl: "At night (22:00–05:00)",
   politeness: '"Please" prompts',
   swearing: "Swearing",
   annoyed: "Annoyed",

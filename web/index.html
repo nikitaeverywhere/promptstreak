@@ -67,6 +67,10 @@
   .dd .t svg{width:12px;height:12px;color:var(--faint);transition:transform .18s var(--ease)}
   .dd[data-open] .t svg{transform:rotate(180deg)}
   .dd .d{font-size:13.5px;color:var(--mute)}
+  /* The main title wears the graph's colour, like the number it explains. */
+  #ddMain .t{color:var(--g4)}
+  #ddMain[data-tone="night"] .t{color:var(--n4)} #ddMain[data-tone="heat"] .t{color:var(--h4)} #ddMain[data-tone="warm"] .t{color:var(--w4)}
+  #ddMain.wait .t{color:var(--mute)}
   .dd.over{opacity:.38;transition:opacity .15s}
   .dd.over:hover,.dd.over[data-open],.dd.over[data-on]{opacity:1}
   .dd.over .t{color:var(--mute);font-weight:600}
@@ -316,6 +320,6 @@
 <div class="toast" id="toast"></div>
 <canvas id="canvas" width="2400" height="1260"></canvas>
 <canvas id="qcanvas" width="2400" height="1260" style="display:none"></canvas>
-<script type="module" src="./app.js?v=275704a057"></script>
+<script type="module" src="./app.js?v=5414c7840d"></script>
 </body>
 </html>
